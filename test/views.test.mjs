@@ -279,3 +279,22 @@ test('progress cards retain retry, close, cancellation, and message presentation
   assert.match(running, /data-action="cancel"/);
   assert.doesNotMatch(running, /data-action="retry"|data-action="dismiss-job"/);
 });
+
+// Result links remain usable from any view and never appear before successful completion.
+test('completed progress cards expose escaped links to their saved results', () => {
+  const job = { kind: 'sequence', status: 'completed' };
+  const options = {
+    busy: false, completed: true, messages: [], newMessage: false, jobTypeLabels: {},
+    resultLinks: [{ href: '/projects/demo/sequences/result?x=1&y=2', label: 'Open <analysis>' }],
+  };
+  const html = renderJobProgress(job, options);
+  assert.match(html, /href="\/projects\/demo\/sequences\/result\?x=1&amp;y=2"/);
+  assert.match(html, /Open &lt;analysis&gt;/);
+  assert.match(html, /data-action="dismiss-job"/);
+  for (const status of ['queued', 'running', 'failed', 'cancelled', 'interrupted']) {
+    const unfinished = renderJobProgress({ ...job, status }, {
+      ...options, completed: false, busy: ['queued', 'running'].includes(status),
+    });
+    assert.doesNotMatch(unfinished, /href=/);
+  }
+});

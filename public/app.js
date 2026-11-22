@@ -19,6 +19,7 @@ import {
   formatJobElapsed,
   getJobMessages,
   getJobDismissalDelay,
+  getCompletedJobTargets,
 } from './job-progress.js';
 import { setupSequenceZoom } from './sequence-diagram.js';
 import { routeGraphEdges } from './graph-routing.js';
@@ -897,6 +898,13 @@ function renderJob() {
   const busy = ['queued', 'running'].includes(job.status);
   const completed = job.status === 'completed';
   const messages = getJobMessages(job);
+  const resultLinks = getCompletedJobTargets(data).map(
+    // Route to the exact completed result regardless of the currently selected view.
+    (target) => ({
+      href: projectUrl(target.tab, target.selection),
+      label: target.label,
+    }),
+  );
   const signature = JSON.stringify([
     data.id,
     job.id,
@@ -907,6 +915,7 @@ function renderJob() {
     job.finishedAt,
     messages,
     job.coverage,
+    resultLinks,
   ]);
 
   // Polling unchanged progress must not replay the incoming-message animation.
@@ -919,6 +928,7 @@ function renderJob() {
       messages,
       newMessage,
       jobTypeLabels,
+      resultLinks,
     });
     panel.dataset.signature = signature;
     panel.dataset.jobId = job.id;

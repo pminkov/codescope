@@ -15,7 +15,9 @@ function renderJobMessage({ message, timestamp }, animate) {
 }
 
 // Render progress without changing timers, dismissal state, or message history.
-export function renderJobProgress(job, { busy, completed, messages, newMessage, jobTypeLabels }) {
+export function renderJobProgress(job, {
+  busy, completed, messages, newMessage, jobTypeLabels, resultLinks = [],
+}) {
   const stateClass = busy ? 'job-active' : completed ? 'job-completed' : '';
   const failedClass = ['failed', 'interrupted'].includes(job.status) ? 'job-failed' : '';
   const type = jobTypeLabels[job.kind] || 'Analysis';
@@ -66,6 +68,12 @@ export function renderJobProgress(job, { busy, completed, messages, newMessage, 
         }
       </div>
       <div class="job-controls">
+        ${completed ? resultLinks.map(
+          // Ordinary links support in-app navigation, new tabs, and copying the result URL.
+          (link) => /* HTML */ `
+            <a class="button primary" href="${escape(link.href)}">${escape(link.label)}</a>
+          `,
+        ).join('') : ''}
         <button
           type="button"
           class="button"
@@ -90,7 +98,7 @@ export function renderJobProgress(job, { busy, completed, messages, newMessage, 
                 }
                 <button
                   type="button"
-                  class="button ${completed ? 'primary' : ''}"
+                  class="button ${completed && !resultLinks.length ? 'primary' : ''}"
                   data-action="dismiss-job"
                   aria-label="Close analysis progress"
                 >

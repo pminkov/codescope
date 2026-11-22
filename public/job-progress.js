@@ -1,3 +1,33 @@
+// Locate only the saved results produced by the current completed job.
+export function getCompletedJobTargets(project) {
+  const job = project?.job;
+  if (job?.status !== 'completed') return [];
+  const targets = [];
+  if (['initial', 'directories'].includes(job.kind) && project.hasDirectoryAnalysis)
+    targets.push({ tab: 'directories', selection: '', label: 'Open directories' });
+
+  const kinds = {
+    initial: ['architectures', 'architecture'],
+    architecture: ['architectures', 'architecture'],
+    flow: ['flows', 'flows'],
+    nouns: ['nounAnalyses', 'nouns'],
+    sequence: ['sequences', 'sequences'],
+  };
+  const target = kinds[job.kind];
+  if (!target) return targets;
+  const [collection, tab] = target;
+  const id = job.kind === 'initial' ? 'overview' : job.resultId || job.analysisId;
+  const exists = id && project[collection]?.some(
+    // Deleted results must not link to an unrelated default selection.
+    (analysis) => analysis.id === id,
+  );
+  if (exists) targets.push({
+    tab, selection: id, label: job.kind === 'initial' ? 'Open architecture' : 'Open analysis',
+  });
+
+  return targets;
+}
+
 // Allow dismissal only after a real analysis job has reached a terminal state.
 function canDismissJob(job) {
   return Boolean(job?.id && job.kind !== 'index' &&
