@@ -13,6 +13,7 @@
   --green: #a6d8b9;
   --green-bg: #273c2f;
   --green-line: #44674f;
+  --brand-echo: #456952;
   --amber: #d4ba83;
   --amber-bg: #332e22;
   --amber-line: #645536;
@@ -41,6 +42,7 @@
   --green: #346044;
   --green-bg: #d7e3d0;
   --green-line: #9cb59d;
+  --brand-echo: #a6c79d;
   --amber: #806325;
   --amber-bg: #e8dfc5;
   --amber-line: #c8b47f;
@@ -103,13 +105,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 ::selection { color: var(--bg); background: var(--green); }
 .icon { width: 18px; height: 18px; flex: 0 0 auto; vertical-align: middle; }
 .topbar { height: 76px; padding: 0 42px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--panel); }
+/* Offset a sharp green echo behind the wordmark and lens icon. */
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 1.5rem;
   letter-spacing: -.65px;
-  font-weight: 650;
+  font-weight: 750;
+  text-shadow: 3px 3px 0 var(--brand-echo);
 }
 .brand-icon {
   width: 30px;
@@ -117,6 +121,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
   flex: 0 0 auto;
   color: var(--green);
   margin-right: 1px;
+  filter: drop-shadow(2px 2px 0 var(--brand-echo));
 }
 i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 .icon-button { width: 32px; height: 32px; background: transparent; border: 1px solid var(--border); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
