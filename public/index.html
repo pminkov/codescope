@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Understand local projects with directory explanations, source-linked code flows, and system architecture.">
+    <meta name="color-scheme" content="dark light">
+    <title>CodeScope · Understand your projects</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d322c'/%3E%3Cpath d='m12 9-7 7 7 7m8-14 7 7-7 7' fill='none' stroke='%239cddbd' stroke-width='2'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/directories" aria-label="CodeScope home"><span class="brand-icon" aria-hidden="true">⌘</span>CodeScope</a>
+      <button id="theme-toggle" class="icon-button" aria-label="Switch to light theme" title="Switch theme"></button>
+    </header>
+    <main>
+      <div class="project-bar"><div class="project-picker-field"><select id="project-picker" aria-label="Choose project"><option>Loading projects…</option></select><svg class="project-picker-chevron" aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></div><button id="add-project" class="button">+ Add project</button></div>
+      <section class="project-heading" aria-labelledby="project-name">
+        <div class="project-title">
+          <div class="project-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 10V7h9l3 3h12v17H4Z"/></svg></div>
+          <div class="title-line">
+            <h1 id="project-name"></h1>
+            <details id="project-actions" class="project-actions actions-dropdown" hidden>
+              <summary class="project-actions-trigger" aria-label="Project actions" title="Project actions"><span data-icon="more"></span></summary>
+              <div class="actions-menu" role="group" aria-label="Project actions">
+                <button type="button" id="project-info" aria-label="Project info" aria-haspopup="dialog" aria-controls="project-info-dialog" disabled><span data-icon="info"></span><span><strong>Info</strong><small>Project information</small></span></button>
+                <button type="button" id="rename-project" aria-label="Rename project" disabled><span data-icon="rename"></span><span><strong>Rename</strong><small>Change the project name</small></span></button>
+                <div class="actions-divider"></div>
+                <button type="button" id="delete-project" class="action-delete" aria-label="Delete project" disabled><span data-icon="delete"></span><span><strong id="delete-project-label">Delete</strong><small>Remove this project</small></span></button>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+      <nav class="tabs" aria-label="Project views"><a href="/directories" id="tab-directories"> <span data-icon="folder"></span>Directories</a><a href="/code-scan" id="tab-code-scan"><span data-icon="scan"></span>Code Scan</a><a href="/architecture" id="tab-architecture"><span data-icon="architecture"></span>Architecture<span class="count" id="architecture-count">0</span></a><a href="/flows" id="tab-flows"><span data-icon="flow"></span>Code flows<span class="count" id="flow-count">0</span></a><a href="/nouns" id="tab-nouns"><span data-icon="nouns"></span>Nouns<span class="count" id="nouns-count">0</span></a><a href="/sequences" id="tab-sequences"><span data-icon="sequences"></span>Sequences<span class="count" id="sequences-count">0</span></a><a href="/all" id="tab-all"><span data-icon="all"></span>All<span class="count" id="all-count">0</span></a></nav>
+      <div id="job-panel" aria-live="polite"></div><div id="notice" role="status" aria-live="polite"></div>
+      <section id="view"><div class="loading"><span class="loading-dot"></span>Loading local projects…</div></section>
+    </main>
+    <div id="ask-widget">
+      <section id="ask-panel" role="dialog" aria-labelledby="ask-title" hidden>
+        <header class="ask-heading"><div><span class="eyebrow">ASK CODEX</span><h2 id="ask-title">About this view</h2></div><button type="button" id="ask-new" class="button">New chat</button><button type="button" id="ask-close" class="icon-button" aria-label="Close Ask">×</button></header>
+        <p id="ask-context" class="ask-context"></p>
+        <div id="ask-messages" role="log" aria-label="Conversation with Codex" aria-live="polite" tabindex="0"></div>
+        <form id="ask-form">
+          <label for="ask-question">Your question</label>
+          <textarea id="ask-question" rows="3" maxlength="4000" required placeholder="What would you like to understand?"></textarea>
+          <div class="ask-form-footer"><span>Uses this view and project source</span><button type="button" id="ask-stop" class="button" hidden>Stop</button><button type="submit" id="ask-send" class="button primary" disabled>Send question ↑</button></div>
+        </form>
+      </section>
+      <button type="button" id="ask-launcher" aria-label="Ask Codex about this view" aria-controls="ask-panel" aria-expanded="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Ask</span></button>
+    </div>
+    <dialog id="job-prompts-dialog" aria-labelledby="job-prompts-title">
+      <div class="source-heading"><div><span class="eyebrow">CODEX INPUT</span><h2 id="job-prompts-title">Analysis prompt</h2></div><button type="button" id="close-job-prompts" class="icon-button" aria-label="Close analysis prompt" autofocus>×</button></div>
+      <div class="node-dialog-body">
+        <p id="job-prompts-status" role="status">Loading prompt…</p>
+        <div id="job-prompts-content" hidden>
+          <label for="job-prompt-stage">Analysis stage</label>
+          <select id="job-prompt-stage"></select>
+          <div class="job-input-controls" role="group" aria-label="Inspect analysis input">
+            <button type="button" id="job-input-prompt" class="button" data-job-input="prompt" aria-pressed="true">Prompt</button>
+            <button type="button" id="job-input-schema" class="button" data-job-input="schema" aria-pressed="false">Output schema</button>
+          </div>
+          <p class="job-prompt-location"><span id="job-input-label">Saved prompt</span><code id="job-prompt-path"></code></p>
+          <pre id="job-prompt-text" tabindex="0" aria-label="Exact prompt sent to Codex"></pre>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="project-info-dialog" aria-labelledby="project-info-title">
+      <div class="source-heading"><div><span class="eyebrow">PROJECT INFO</span><h2 id="project-info-title"></h2></div><button type="button" id="close-project-info" class="icon-button" aria-label="Close project info" autofocus>×</button></div>
+      <div class="node-dialog-body" id="project-info-body">
+        <dl class="project-info-fields">
+          <div><dt>Directory</dt><dd id="project-path" class="mono"></dd></div>
+          <div><dt>Stack</dt><dd id="stack"></dd></div>
+        </dl>
+      </div>
+    </dialog>
+    <dialog id="action-dialog" aria-labelledby="action-title" aria-describedby="action-description">
+      <form method="dialog">
+        <div class="source-heading"><div><span class="eyebrow" id="action-project"></span><h2 id="action-title"></h2></div><button type="button" id="close-action" class="icon-button" aria-label="Close confirmation">×</button></div>
+        <div class="action-dialog-body"><p id="action-description"></p><p id="action-usage"></p><p id="action-result"></p></div>
+        <div class="action-dialog-buttons"><button class="button" value="no" autofocus>No, go back</button><button class="button primary" id="confirm-action" value="yes">Yes, proceed</button></div>
+      </form>
+    </dialog>
+    <dialog id="modify-analysis-dialog" aria-labelledby="modify-analysis-title" aria-describedby="modify-analysis-description">
+      <form id="modify-analysis-form" method="dialog">
+        <div class="source-heading"><div><span class="eyebrow" id="modify-analysis-name"></span><h2 id="modify-analysis-title">Modify analysis</h2></div><button type="button" id="close-modify-analysis" class="icon-button" aria-label="Close modification">×</button></div>
+        <div class="project-form-body"><p id="modify-analysis-description">Describe what to change. The updated result will replace this saved analysis when it completes.</p><label for="modification-prompt">What would you like to change?</label><textarea id="modification-prompt" name="prompt" rows="6" required maxlength="4000" placeholder="For example, split the storage component into separate responsibilities and show their connections." autofocus></textarea><p class="form-note">Your current result stays available while the modification runs. Source files stay unchanged.</p></div>
+        <div class="action-dialog-buttons"><button class="button" value="cancel" formnovalidate>Cancel</button><button class="button primary" value="modify">Modify analysis</button></div>
+      </form>
+    </dialog>
+    <dialog id="project-dialog" aria-labelledby="add-project-title">
+      <form id="project-form"><div class="source-heading"><div><span class="eyebrow">LOCAL WORKSPACE</span><h2 id="add-project-title">Add a project</h2></div><button type="button" id="close-project" class="icon-button" aria-label="Close Add project">×</button></div>
+      <div class="project-form-body"><p>Point CodeScope at a local repository or directory. Your files stay in place.</p><label for="project-directory">Directory path</label><div class="directory-picker-field"><input id="project-directory" name="path" required placeholder="Choose a folder or paste a path" autocomplete="off" spellcheck="false"><button id="browse-directory" class="button" type="button">Browse…</button></div><label for="new-project-name">Project name <span>(optional)</span></label><input id="new-project-name" name="name" maxlength="100" placeholder="Defaults to the folder name" autocomplete="off"><p class="form-note">Analysis runs through your local Codex CLI and sends the filtered source to OpenAI. Results are stored by CodeScope; the selected directory is read-only.</p><p id="runner-status" class="form-note">Checking Codex…</p><p id="project-form-error" role="alert"></p><button id="submit-project" class="button primary" type="submit">Add and analyze</button></div></form>
+    </dialog>
+    <dialog id="rename-project-dialog" aria-labelledby="rename-project-title" aria-describedby="rename-project-description">
+      <form id="rename-project-form">
+        <div class="source-heading"><h2 id="rename-project-title">Rename project</h2><button type="button" id="close-rename-project" class="icon-button" aria-label="Close Rename project">×</button></div>
+        <div class="project-form-body"><p id="rename-project-description">Change the display name in CodeScope. The source directory, project URL, and saved analyses stay the same.</p><label for="renamed-project-name">Project name</label><input id="renamed-project-name" name="name" required maxlength="100" autocomplete="off" aria-describedby="rename-project-hint rename-project-error"><p id="rename-project-hint" class="form-note">Choose a unique name. Names are compared without case or surrounding spaces.</p><p id="rename-project-error" role="alert"></p></div>
+        <div class="action-dialog-buttons"><button type="button" id="cancel-rename-project" class="button">Cancel</button><button type="submit" id="save-project-name" class="button primary">Save name</button></div>
+      </form>
+    </dialog>
+    <dialog id="sequence-details-dialog" aria-labelledby="sequence-details-title">
+      <div class="source-heading"><div><span class="eyebrow" id="sequence-details-kind"></span><h2 id="sequence-details-title"></h2></div><button type="button" id="close-sequence-details" class="icon-button" aria-label="Close sequence details" autofocus>×</button></div>
+      <div id="sequence-details-body" class="node-dialog-body"></div>
+      <div id="sequence-message-navigation" role="group" aria-label="Message navigation" hidden>
+        <button type="button" id="sequence-message-previous" class="button" aria-label="Previous message">← Previous</button>
+        <span id="sequence-message-position" role="status" aria-live="polite" aria-atomic="true"></span>
+        <button type="button" id="sequence-message-next" class="button" aria-label="Next message">Next →</button>
+      </div>
+    </dialog>
+    <dialog id="noun-details-dialog" aria-labelledby="noun-details-title">
+      <div class="source-heading"><div><span class="eyebrow">NOUN DETAILS</span><h2 id="noun-details-title"></h2></div><button type="button" id="close-noun-details" class="icon-button" aria-label="Close noun details" autofocus>×</button></div>
+      <div id="noun-details-body" class="node-dialog-body"></div>
+    </dialog>
+    <dialog id="node-dialog" aria-labelledby="node-title">
+      <div class="source-heading"><div><span class="eyebrow" id="node-kind"></span><h2 id="node-title"></h2></div><button type="button" id="close-node" class="icon-button" aria-label="Close component details" autofocus>×</button></div>
+      <div id="node-body" class="node-dialog-body"></div>
+      <div class="node-dialog-footer"><p id="node-delete-error" role="alert"></p><button type="button" id="delete-node" class="button danger">Delete node</button></div>
+    </dialog>
+    <dialog id="delete-node-dialog" aria-labelledby="delete-node-title" aria-describedby="delete-node-description">
+      <form method="dialog">
+        <div class="source-heading"><div><span class="eyebrow">EDIT SAVED DIAGRAM</span><h2 id="delete-node-title">Delete node?</h2></div><button type="button" id="close-delete-node" class="icon-button" aria-label="Close delete confirmation">×</button></div>
+        <div class="action-dialog-body"><p id="delete-node-description"></p><p>This removes the node and all its incoming and outgoing connections from this diagram’s saved JSON. This cannot be undone.</p></div>
+        <div class="action-dialog-buttons"><button class="button" value="no" autofocus>No, keep node</button><button class="button danger" value="yes">Yes, delete node</button></div>
+      </form>
+    </dialog>
+    <dialog id="analysis-changes-dialog" aria-labelledby="analysis-changes-title" aria-describedby="analysis-changes-description">
+      <div class="source-heading"><div><span class="eyebrow" id="analysis-changes-name"></span><h2 id="analysis-changes-title"></h2></div><button type="button" id="close-analysis-changes" class="icon-button" aria-label="Close changed files" autofocus>×</button></div>
+      <div class="analysis-changes-body"><p id="analysis-changes-description">Files added, modified, removed, or unreadable since this analysis. Removed includes files now excluded by project ignore rules.</p><ul id="analysis-changes-list"></ul></div>
+    </dialog>
+    <dialog id="source-dialog" aria-labelledby="source-title"><div class="source-heading"><div><span class="eyebrow">SOURCE PREVIEW</span><h2 id="source-title"></h2></div><button id="close-source" class="icon-button" aria-label="Close source preview">×</button></div><p id="source-context" class="source-context"></p><div id="source-body"></div></dialog>
+  </body>
+</html>

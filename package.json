@@ -1,0 +1,31 @@
+{
+  "name": "codescope",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check src/server.mjs && node --check src/ask.mjs && node --check src/code-scan.mjs && node --check src/analysis.mjs && node --check src/storage.mjs && node --check src/job-history.mjs && node --check src/runner.mjs && node --check src/schemas.mjs && node --check src/citations.mjs && node --check src/native-dialog.mjs && node --check public/job-progress.js && node --check public/app.js && node --check public/ask.js && node --check public/dialog-stack.js && node --check public/analysis-list.js && node --check public/graph-routing.js && node --check public/sequence-diagram.js && node --check public/code-scan.js && node --check public/content.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@ast-grep/lang-bash": "^0.0.8",
+    "@ast-grep/lang-c": "^0.0.6",
+    "@ast-grep/lang-cpp": "^0.0.6",
+    "@ast-grep/lang-csharp": "^0.0.6",
+    "@ast-grep/lang-go": "^0.0.6",
+    "@ast-grep/lang-java": "^0.0.7",
+    "@ast-grep/lang-kotlin": "^0.0.7",
+    "@ast-grep/lang-php": "^0.0.7",
+    "@ast-grep/lang-python": "^0.0.6",
+    "@ast-grep/lang-ruby": "^0.0.7",
+    "@ast-grep/lang-rust": "^0.0.7",
+    "@ast-grep/lang-swift": "^0.0.8",
+    "@ast-grep/napi": "^0.51.3",
+    "ignore": "^7.0.16"
+  }
+}
