@@ -10,6 +10,7 @@ Requires Node.js 22+ and the Codex CLI on your PATH.
 ```sh
 git clone https://github.com/pminkov/codescope.git
 cd codescope
+# Install dependencies using the exact versions in package-lock.json.
 npm ci
 codex login
 npm start
@@ -36,10 +37,12 @@ saved projects and analyses when changing its location.
 
 ## Source and privacy
 
-Analysis sends filtered source to OpenAI through Codex. Scanning respects
-`.gitignore` and `.codescopeignore`, and excludes hidden files and common key files.
-CodeScope does not modify your source. Saved job history includes source snapshots
-and prompts; the default `.codescope/` directory is gitignored.
+- Analysis sends filtered source to OpenAI through Codex.
+- Scanning respects `.gitignore` and `.codescopeignore` in the project being analyzed.
+- Hidden files and common key files are excluded from scanning.
+- CodeScope does not modify your source.
+- Saved job history includes source snapshots and prompts.
+- The default `.codescope/` data directory is gitignored.
 
 ## Development
 
