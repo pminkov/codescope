@@ -4,7 +4,6 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import ignore from 'ignore';
 import { stackLabels } from './schemas.mjs';
-import { normalizeAnalysis } from './citations.mjs';
 import { buildCodeScan, isCodeFile, scanCodeFile } from './code-scan.mjs';
 
 const omitted = new Set([
@@ -262,25 +261,16 @@ export function resolveReference(reference, sources) {
   const content = sources[reference.path];
   if (content === undefined) return { ...reference, line: null, stale: true };
   const lines = content.split('\n');
-  if (reference.line)
-    return {
-      ...reference,
-      line:
-        reference.line <= lines.length && (!reference.endLine || reference.endLine <= lines.length)
-          ? reference.line
-          : null,
-      stale: Boolean(reference.hash && reference.hash !== fingerprint(content)),
-    };
-  const escaped = reference.symbol?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const lineIndex = lines.findIndex(
-    // Locate a legacy citation by its match text or declared symbol.
-    (line) =>
-      reference.match
-        ? line.includes(reference.match)
-        : escaped && new RegExp(`(?:function\\s+|const\\s+)${escaped}\\b`).test(line),
-  );
 
-  return { ...reference, line: lineIndex === -1 ? null : lineIndex + 1 };
+  return {
+    ...reference,
+    line:
+      Number.isInteger(reference.line) && reference.line > 0 &&
+      reference.line <= lines.length && (!reference.endLine || reference.endLine <= lines.length)
+        ? reference.line
+        : null,
+    stale: Boolean(reference.hash && reference.hash !== fingerprint(content)),
+  };
 }
 
 // Compare all historical files with the current scan without changing the baseline.
@@ -329,18 +319,13 @@ export async function projectView(project, index, understanding, job) {
     else for (const item of Object.values(value)) collectReferences(item);
   };
 
-  // Normalize one result using its own historical hashes, excluding storage metadata.
+  // Present a saved result with its own source comparison, excluding storage metadata.
   const presentAnalysis = (analysis) => {
     if (!analysis) return null;
     const { baseline, coverage, ...content } = analysis;
-    const hashes = baseline?.files || {};
-    const normalized = normalizeAnalysis(content, {
-      knownPaths: new Set([...Object.keys(index.files), ...Object.keys(hashes)]),
-      hashes,
-    });
-    collectReferences(normalized);
+    collectReferences(content);
 
-    return { ...normalized, review: compareAnalysisSource(baseline, index.files) };
+    return { ...content, review: compareAnalysisSource(baseline, index.files) };
   };
 
   const directoryData = presentAnalysis(understanding.directoryAnalysis);

@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const retainedJobCount = 3;
@@ -17,30 +17,13 @@ When another job starts, older job directories are removed in their entirety.
 Saved diagrams and flows live in the project's understanding.json, outside this
 debugging history, and are unaffected by this retention limit.
 
-Existing jobs are migrated from jobs/. Files deleted by older versions cannot
-be recovered. Legacy jobs without job.json are ordered by directory modification
-time.
+Jobs are ordered by the startedAt timestamp recorded in job.json.
 `;
 
-// Move legacy working directories without changing any files inside each job.
+// Create the job history directory and describe its retention policy.
 export async function prepareJobHistory(projectDirectory) {
   const directory = resolve(projectDirectory, 'last_jobs');
-  const legacyDirectory = resolve(projectDirectory, 'jobs');
   await mkdir(directory, { recursive: true });
-  let legacyEntries;
-
-  try {
-    legacyEntries = await readdir(legacyDirectory);
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-
-  if (legacyEntries) {
-    for (const name of legacyEntries)
-      await rename(resolve(legacyDirectory, name), resolve(directory, name));
-    await rmdir(legacyDirectory);
-  }
-
   await writeFile(resolve(directory, 'README.md'), historyReadme, { mode: 0o600 });
 
   return directory;
@@ -53,17 +36,10 @@ export async function pruneJobHistory(directory, currentJobId) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const path = resolve(directory, entry.name);
-    let job;
-
-    try {
-      job = JSON.parse(await readFile(resolve(path, 'job.json'), 'utf8'));
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
-
-    // Legacy directories have no metadata; use their existing filesystem order.
-    const timestamp = Date.parse(job?.startedAt || job?.createdAt);
-    const startedAt = Number.isFinite(timestamp) ? timestamp : (await stat(path)).mtimeMs;
+    const job = JSON.parse(await readFile(resolve(path, 'job.json'), 'utf8'));
+    const startedAt = Date.parse(job.startedAt);
+    if (!Number.isFinite(startedAt))
+      throw new Error(`Job history record has an invalid start time: ${entry.name}.`);
     jobs.push({ id: entry.name, path, startedAt });
   }
 

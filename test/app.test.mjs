@@ -687,32 +687,6 @@ test('projects persist, deduplicate canonical paths, analyze in stages, trace fl
   ];
   await writeJson(store.path(project.id, 'understanding.json'), saved);
   assert.deepEqual((await store.view(project.id)).stack, ['TypeScript']);
-  saved.directoryAnalysis.directories[1].description = 'Runs `main()`. [src/main.ts:1]';
-  saved.directoryAnalysis.directories[1].detail = 'Returns a greeting. [src/main.ts:1]';
-  saved.directoryAnalysis.directories[1].highlights = ['One handler. [src/main.ts:1]'];
-  saved.directoryAnalysis.files[0].description = 'Returns text. [src/main.ts:1] [missing.ts:99]';
-  await writeJson(store.path(project.id, 'understanding.json'), saved);
-  const readable = await store.view(project.id);
-  const sourceDirectory = readable.tree.children.find(
-    // Find the fixture's source directory in the presented tree.
-    (node) => node.path === 'src',
-  );
-  assert.equal(sourceDirectory.description, 'Runs `main()`.');
-  assert.equal(sourceDirectory.sources.length, 1);
-  assert.equal(sourceDirectory.sources[0].line, 1);
-  assert.equal(sourceDirectory.children[0].description, 'Returns text.');
-  assert.equal(
-    sourceDirectory.children[0].sources.find(
-      // Find the unavailable reference retained in the saved explanation.
-      (source) => source.path === 'missing.ts',
-    ).line,
-    null,
-  );
-  assert.ok(
-    JSON.parse(
-      await readFile(store.path(project.id, 'understanding.json'), 'utf8'),
-    ).directoryAnalysis.directories[1].description.includes('[src/main.ts:1]'),
-  );
   await assert.rejects(store.add({ path: `${setup.root}/../demo project` }), { status: 409 });
   await assert.rejects(store.add({ path: join(setup.root, 'README.md') }), { status: 400 });
   await assert.rejects(store.add({ path: 'relative/path' }), { status: 400 });
@@ -891,14 +865,6 @@ test('jobs persist four distinct messages, recover interrupted history, and rese
   const retry = await reopened.enqueue(project.id, interrupted.kind, interrupted.feature);
   assert.notEqual(retry.id, queued.id);
   assert.deepEqual(retry.messages, [{ message: 'Waiting for the analysis worker…', timestamp: retry.createdAt }]);
-  const legacy = (await reopened.get(project.id)).job;
-  delete legacy.messages;
-  legacy.message = 'Legacy progress';
-  await reopened.updateJob(legacy, { message: 'New progress' });
-  assert.deepEqual(legacy.messages, [
-    { message: 'Legacy progress', timestamp: null },
-    { message: 'New progress', timestamp: legacy.updatedAt },
-  ]);
 });
 
 // Generate fresh questions with each successful result while preserving older analyses.
@@ -1190,143 +1156,24 @@ test('analysis baselines and citations retain snapshot hashes when live files ch
   assert.equal(view.architectures[0].nodes[0].sources[0].stale, true);
 });
 
-// Recover historical full inventories and move every kind of result into the new format.
-test('legacy understanding migrates historical baselines in place without adopting current hashes', async (context) => {
-  const setup = await createProjectFixture(context);
-  await writeFile(join(setup.root, 'AGENTS.md'), 'Original instructions.\n');
-  const index = await indexProject(setup.root, 'Demo');
-  const analyzedAt = '2026-11-18T10:01:00.000Z';
-  index.indexedAt = '2026-11-18T10:00:00.000Z';
-  const review = {
-    files: { 'src/main.ts': index.files['src/main.ts'], 'README.md': index.files['README.md'] },
-    indexedPaths: Object.keys(index.files),
-    reviewedAt: analyzedAt,
-  };
-  const legacy = {
-    ...outputs.directories(),
-    architecture: outputs.architecture(),
-    architectures: [{ id: 'focused', ...outputs.architecture() }],
-    flows: [{ id: 'flow', ...outputs.flow() }],
-    nounAnalyses: [{ id: 'nouns', ...outputs.nouns() }],
-    reviews: Object.fromEntries(['directories', 'architecture', 'focused', 'flow', 'nouns'].map(
-      // Simulate old snapshot reviews that omitted the instruction file hash.
-      (id) => [id, review],
-    )),
-    analyzedPaths: Object.keys(index.files),
-    analyzedAt,
-  };
-  const project = { id: 'demo-project', idFormat: 'directory', name: 'Demo', root: setup.root };
-  const projectDirectory = join(setup.dataDirectory, 'projects', project.id);
-  await writeJson(join(setup.dataDirectory, 'projects.json'), [project]);
-  await writeJson(join(projectDirectory, 'understanding.json'), legacy);
-  await writeJson(join(projectDirectory, 'last_jobs/historical/index.json'), index);
-  await writeJson(join(projectDirectory, 'last_jobs/historical/job.json'), {
-    startedAt: index.indexedAt, finishedAt: '2026-11-18T10:02:00.000Z', status: 'completed',
-  });
-  await writeFile(join(setup.root, 'AGENTS.md'), 'Changed instructions.\n');
-  await rm(join(setup.root, 'README.md'));
-  await writeFile(join(setup.root, 'new.txt'), 'Added after analysis.\n');
-  await writeJson(join(projectDirectory, 'index.json'), await indexProject(setup.root, 'Demo'));
-  const store = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Close migration storage after checking its persisted result.
-  context.after(() => store.close());
-  const view = await store.view(project.id);
-  for (const comparison of [view.directoryReview, ...view.architectures.map(
-    // Include both architecture variants in migration coverage.
-    (graph) => graph.review,
-  ), view.flows[0].review, view.nounAnalyses[0].review]) {
-    assert.deepEqual(comparison.changedFiles, ['AGENTS.md', 'README.md']);
-    assert.deepEqual(comparison.newFiles, ['new.txt']);
-    assert.deepEqual(comparison.unknownFiles, []);
-    assert.equal(comparison.reviewedAt, analyzedAt);
-  }
-  const path = join(projectDirectory, 'understanding.json');
-  const savedText = await readFile(path, 'utf8');
-  const saved = JSON.parse(savedText);
-  assert.equal(saved.directoryAnalysis.summary, legacy.summary);
-  for (const analysis of [saved.directoryAnalysis, ...saved.architectures, ...saved.flows, ...saved.nounAnalyses])
-    assert.deepEqual(analysis.baseline.files, index.files);
-  for (const key of ['reviews', 'analyzedPaths', 'analyzedAt', 'summary', 'directories', 'files', 'architecture'])
-    assert.equal(Object.hasOwn(saved, key), false);
-  await assert.rejects(readFile(join(projectDirectory, 'index.json')), { code: 'ENOENT' });
-  await store.close();
-  const reopened = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Verify a second startup leaves the migrated file byte-for-byte unchanged.
-  context.after(() => reopened.close());
-  await reopened.list();
-  assert.equal(await readFile(path, 'utf8'), savedText);
-});
-
-// Move old overviews into the diagram array while retaining evidence, edits, and links.
-test('architecture migration unifies saved diagrams without duplicates or data changes', async (context) => {
-  const baseline = { analyzedAt: '2026-11-18T10:00:00.000Z', files: { 'src/main.ts': 'original-hash' } };
-  const overview = { ...outputs.architecture(), baseline };
-  const converted = {
-    ...overview, id: 'overview', requestedQuestion: null, createdAt: baseline.analyzedAt,
-  };
-  const focused = {
-    ...outputs.architecture(), id: 'focused-view', title: 'Focused view',
-    requestedQuestion: 'How is this component used?', createdAt: baseline.analyzedAt, baseline,
-  };
-  const edited = { ...converted, title: 'Edited overview', nodes: [] };
-  const cases = [
-    { name: 'overview only', overview, expected: [converted] },
-    { name: 'overview and focused', overview, graphs: [focused], expected: [converted, focused] },
-    { name: 'empty', overview: null, graphs: [], expected: [] },
-    { name: 'focused only', overview: null, graphs: [focused], expected: [focused] },
-    { name: 'already converted', overview, graphs: [edited, focused], expected: [edited, focused] },
-  ];
-
-  for (const entry of cases) {
-    const setup = await createProjectFixture(context);
-    const project = { id: 'demo-project', idFormat: 'directory', name: 'Demo', root: setup.root };
-    const directory = join(setup.dataDirectory, 'projects', project.id);
-    const file = join(directory, 'understanding.json');
-    const otherResults = { directoryAnalysis: { summary: 'Keep this explanation.' }, flows: [{ id: 'flow' }] };
-    await writeJson(join(setup.dataDirectory, 'projects.json'), [project]);
-    await writeJson(file, {
-      ...otherResults, architecture: entry.overview,
-      ...(entry.graphs ? { architectures: entry.graphs } : {}),
-    });
-    const store = new ProjectStore({ dataDirectory: setup.dataDirectory });
-    // Finish migration writes before removing this case's temporary files.
-    context.after(() => store.close());
-    await store.list();
-    const savedText = await readFile(file, 'utf8');
-    const saved = JSON.parse(savedText);
-    assert.deepEqual(saved.architectures, entry.expected, entry.name);
-    assert.equal(Object.hasOwn(saved, 'architecture'), false, entry.name);
-    assert.deepEqual(saved.directoryAnalysis, otherResults.directoryAnalysis);
-    assert.deepEqual(saved.flows, otherResults.flows);
-    await store.close();
-
-    const reopened = new ProjectStore({ dataDirectory: setup.dataDirectory });
-    // Close the restarted store after checking byte-for-byte migration idempotence.
-    context.after(() => reopened.close());
-    await reopened.list();
-    assert.equal(await readFile(file, 'utf8'), savedText, entry.name);
-    await reopened.close();
-  }
-});
-
 // Keep missing historical hashes explicit rather than treating today's files as history.
-test('legacy analyses with unavailable historical hashes show an incomplete comparison', async (context) => {
+test('analyses with unavailable historical hashes show an incomplete comparison', async (context) => {
   const setup = await createProjectFixture(context);
   const index = await indexProject(setup.root, 'Demo');
-  const project = { id: 'demo-project', idFormat: 'directory', name: 'Demo', root: setup.root };
+  const project = { id: 'demo-project', name: 'Demo', root: setup.root };
   const projectDirectory = join(setup.dataDirectory, 'projects', project.id);
   await writeJson(join(setup.dataDirectory, 'projects.json'), [project]);
   await writeJson(join(projectDirectory, 'understanding.json'), {
-    ...outputs.directories(),
-    reviews: { directories: {
-      files: { 'src/main.ts': index.files['src/main.ts'] },
-      indexedPaths: Object.keys(index.files),
-      reviewedAt: '2020-01-01T00:00:00.000Z',
-    } },
+    directoryAnalysis: {
+      ...outputs.directories(),
+      baseline: {
+        files: { 'src/main.ts': index.files['src/main.ts'], 'README.md': null },
+        analyzedAt: '2020-01-01T00:00:00.000Z',
+      },
+    },
   });
-  await writeJson(join(projectDirectory, 'index.json'), index);
   const store = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Finish the migration and all writes before removing its fixture.
+  // Finish startup writes before removing the fixture.
   context.after(() => store.close());
   const view = await store.view(project.id);
   assert.equal(view.directoryReview.current, false);
@@ -1526,101 +1373,6 @@ test('project IDs use source directory names and avoid normalized and on-disk co
   assert.equal(persisted.root, movedRoot);
   await assert.rejects(readFile(reopened.path(first.id, 'index.json')), { code: 'ENOENT' });
   assert.equal((await reopened.view(first.id)).stats.files, 2);
-});
-
-// Verify legacy storage and saved results migrate together without UUID aliases.
-test('project ID migration preserves data and resumes after a partially completed rename', async (context) => {
-  const setup = await createProjectFixture(context);
-  const firstId = '928ed315-cd82-4c4f-a1bd-9e716ec62196';
-  const secondId = '8e59ce7f-cb52-4f4c-a1db-6904bc8b7137';
-  const secondRoot = join(setup.directory, 'other', 'Demo Project');
-  await mkdir(secondRoot, { recursive: true });
-  const projects = [
-    { id: firstId, root: setup.root, name: 'First display name' },
-    { id: secondId, root: secondRoot, name: 'Second display name' },
-  ];
-  await writeJson(join(setup.dataDirectory, 'projects.json'), projects);
-
-  for (const project of projects) {
-    const directory = join(setup.dataDirectory, 'projects', project.id);
-    await writeJson(join(directory, 'understanding.json'), { summary: project.name });
-    await writeJson(join(directory, 'index.json'), { files: {} });
-    await mkdir(join(directory, 'last_jobs', 'debug-job', 'source'), { recursive: true });
-    await writeFile(join(directory, 'last_jobs/debug-job/source/partial.txt'), project.name);
-  }
-
-  // Simulate a process stopping after moving one directory but before saving IDs.
-  const migrationPath = join(setup.dataDirectory, 'project-id-migration.json');
-  await writeJson(migrationPath, [
-    { oldId: firstId, newId: 'demo-project' },
-    { oldId: secondId, newId: 'demo-project-01' },
-  ]);
-  await rename(
-    join(setup.dataDirectory, 'projects', firstId),
-    join(setup.dataDirectory, 'projects', 'demo-project'),
-  );
-  const store = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Close the recovered store after checking all migrated data.
-  context.after(() => store.close());
-  const migrated = await store.list();
-  assert.deepEqual(migrated.map(
-    // Preserve registry order while replacing both legacy IDs.
-    (project) => project.id,
-  ), ['demo-project', 'demo-project-01']);
-
-  for (const [index, project] of migrated.entries()) {
-    assert.equal(project.idFormat, 'directory');
-    assert.deepEqual(
-      JSON.parse(await readFile(store.path(project.id, 'understanding.json'), 'utf8')),
-      { directoryAnalysis: { summary: projects[index].name } },
-    );
-    await assert.rejects(readFile(store.path(project.id, 'index.json')), { code: 'ENOENT' });
-    assert.equal(
-      await readFile(store.path(project.id, 'last_jobs/debug-job/source/partial.txt'), 'utf8'),
-      projects[index].name,
-    );
-    await assert.rejects(readdir(store.path(projects[index].id, '.')), { code: 'ENOENT' });
-    await assert.rejects(store.get(projects[index].id), { status: 404 });
-  }
-
-  await assert.rejects(readFile(migrationPath), { code: 'ENOENT' });
-  await store.close();
-  const reopened = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Close the second store after verifying migration does not repeat.
-  context.after(() => reopened.close());
-  assert.deepEqual((await reopened.list()).map(
-    // Read persisted IDs after the migration journal has been removed.
-    (project) => project.id,
-  ), ['demo-project', 'demo-project-01']);
-});
-
-// Verify startup plans unique readable names while preserving existing readable IDs.
-test('startup allocates readable IDs for legacy projects without overwriting existing folders', async (context) => {
-  const setup = await createProjectFixture(context);
-  const existingRoot = join(setup.directory, 'existing', 'Demo Project');
-  await mkdir(existingRoot, { recursive: true });
-  await writeJson(join(setup.dataDirectory, 'projects.json'), [
-    { id: 'legacy-first', root: setup.root, name: 'Legacy' },
-    { id: 'demo-project', idFormat: 'directory', root: existingRoot, name: 'Existing' },
-  ]);
-  const occupied = join(setup.dataDirectory, 'projects', 'DEMO-PROJECT-01');
-  await mkdir(occupied, { recursive: true });
-  await writeFile(join(occupied, 'keep.txt'), 'preserved');
-  await writeJson(join(setup.dataDirectory, 'projects/legacy-first/understanding.json'), {
-    summary: 'Legacy analysis',
-  });
-  const store = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Close the startup migration store after verifying collision handling.
-  context.after(() => store.close());
-  assert.deepEqual((await store.list()).map(
-    // Compare the migrated ID and the existing stable ID in registration order.
-    (project) => project.id,
-  ), ['demo-project-02', 'demo-project']);
-  assert.equal(await readFile(join(occupied, 'keep.txt'), 'utf8'), 'preserved');
-  assert.equal(
-    JSON.parse(await readFile(store.path('demo-project-02', 'understanding.json'), 'utf8')).directoryAnalysis.summary,
-    'Legacy analysis',
-  );
 });
 
 // Verify focused diagrams preserve previous views and their own source versions.
@@ -2477,38 +2229,50 @@ test('last_jobs retains three started jobs per project and preserves saved resul
   await assert.rejects(readdir(store.path(other.id, 'last_jobs')), { code: 'ENOENT' });
 });
 
-// Verify migration prunes old jobs and preserves interrupted files across restarts.
-test('legacy jobs migrate into last_jobs without deleting retained intermediate files', async (context) => {
+// Order retention by recorded start times and preserve interrupted files across restarts.
+test('job history uses recorded start times and preserves interrupted files', async (context) => {
   const setup = await createProjectFixture(context);
   const project = {
     id: 'demo-project',
-    name: 'Legacy project',
+    name: 'Demo project',
     root: setup.root,
     job: {
       id: 'interrupted-job',
       kind: 'initial',
       status: 'running',
       startedAt: '2026-11-18T10:00:00.000Z',
+      message: 'Analyzing source.',
+      messages: [{ message: 'Analyzing source.', timestamp: '2026-11-18T10:00:00.000Z' }],
     },
   };
   await writeJson(join(setup.dataDirectory, 'projects.json'), [project]);
   const projectDirectory = join(setup.dataDirectory, 'projects', project.id);
-  const savedUnderstanding = { summary: 'Previously saved results', flows: [] };
+  const savedUnderstanding = {
+    directoryAnalysis: { summary: 'Previously saved results' }, flows: [],
+  };
   await writeJson(join(projectDirectory, 'understanding.json'), savedUnderstanding);
 
   for (const [index, id] of ['oldest', 'older', 'recent', 'newest', 'interrupted-job'].entries()) {
-    const directory = join(projectDirectory, 'jobs', id);
+    const directory = join(projectDirectory, 'last_jobs', id);
     await mkdir(join(directory, 'source'), { recursive: true });
     await writeFile(join(directory, 'source/partial.txt'), `partial source ${id}`);
     await writeFile(join(directory, 'architecture.schema.json'), '{}');
     await writeFile(join(directory, 'extra-debug.txt'), `debug ${id}`);
-    // Legacy jobs have no job.json; preserve their original modification order.
-    const timestamp = new Date(`2026-11-18T09:00:0${index}.000Z`);
-    await utimes(directory, timestamp, timestamp);
+    const timestamp = `2026-11-18T09:00:0${index}.000Z`;
+    await writeJson(join(directory, 'job.json'), {
+      id, kind: 'initial', status: 'completed', startedAt: timestamp,
+      finishedAt: timestamp, createdAt: timestamp, updatedAt: timestamp,
+      message: 'Analysis is ready.',
+      messages: [{ message: 'Analysis is ready.', timestamp }],
+    });
+
+    // Filesystem times deliberately oppose execution order and must not affect retention.
+    const modified = new Date(`2026-11-18T09:10:0${4 - index}.000Z`);
+    await utimes(directory, modified, modified);
   }
 
   const store = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Close the migrated store even if an assertion fails.
+  // Close the initialized store even if an assertion fails.
   context.after(() => store.close());
   assert.equal((await store.list())[0].job.status, 'interrupted');
   const history = join(projectDirectory, 'last_jobs');
@@ -2530,11 +2294,11 @@ test('legacy jobs migrate into last_jobs without deleting retained intermediate 
   );
   assert.deepEqual(
     JSON.parse(await readFile(join(projectDirectory, 'understanding.json'), 'utf8')),
-    { flows: [], directoryAnalysis: { summary: savedUnderstanding.summary } },
+    savedUnderstanding,
   );
   await store.close();
   const reopened = new ProjectStore({ dataDirectory: setup.dataDirectory });
-  // Close the second store after verifying that migration is repeatable.
+  // Close the second store after checking that retained files survive restart.
   context.after(() => reopened.close());
   await reopened.list();
   assert.equal(
@@ -2869,6 +2633,12 @@ test('HTTP project APIs, direct routes, method rules, and origin boundaries work
     // Wait for the HTTP-created project's analysis to finish.
     async () => (await store.get(project.id)).job.status === 'completed',
   );
+
+  for (const path of ['/api/project', '/api/source?path=src%2Fmain.ts']) {
+    assert.equal((await fetch(`${base}${path}`)).status, 404);
+    assert.equal((await fetch(`${base}${path}`, { method: 'HEAD' })).status, 404);
+    assert.equal((await post(path, {})).status, 404);
+  }
 
   const directoriesUrl = `/api/projects/${project.id}/directories`;
   assert.equal((await fetch(`${base}${directoriesUrl}`)).status, 405);

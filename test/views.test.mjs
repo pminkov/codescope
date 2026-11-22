@@ -253,7 +253,7 @@ test('source previews preserve indentation and empty lines while escaping source
 test('progress cards retain retry, close, cancellation, and message presentation', () => {
   const messages = [
     { message: 'Read <source>', timestamp: '2026-11-19T12:00:09Z' },
-    { message: 'Stopped', timestamp: null },
+    { message: 'Stopped', timestamp: '2026-11-19T12:00:10Z' },
   ];
   const options = {
     busy: false,
@@ -265,7 +265,7 @@ test('progress cards retain retry, close, cancellation, and message presentation
   const failed = renderJobProgress({ kind: 'flow', status: 'failed' }, options);
   assert.match(failed, /Read &lt;source&gt;/);
   assert.match(failed, /datetime="2026-11-19T12:00:09Z"/);
-  assert.match(failed, /Timestamp unavailable/);
+  assert.match(failed, /datetime="2026-11-19T12:00:10Z"/);
   assert.equal((failed.match(/class="job-message-new"/g) || []).length, 1);
   assert.match(failed, /data-action="retry"/);
   assert.match(failed, /data-action="dismiss-job"/);

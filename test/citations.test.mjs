@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { extractCitations, normalizeAnalysis } from '../src/citations.mjs';
+import { fingerprint, resolveReference } from '../src/analysis.mjs';
 import { formatText } from '../public/content.js';
 
 const options = {
@@ -8,8 +9,23 @@ const options = {
   hashes: { 'src/main.ts': 'reviewed-hash' },
 };
 
-// Verify legacy marker normalization preserves identifiers and deduplicates evidence.
-test('legacy citation markers become deduplicated evidence without changing source identifiers', () => {
+// Resolve exact saved lines without guessing locations from symbols or match text.
+test('source references require explicit lines and retain source freshness', () => {
+  const content = 'export function main() { return 42; }\n';
+  const sources = { 'src/main.ts': content };
+  const reference = { path: 'src/main.ts', symbol: 'main', hash: fingerprint(content) };
+  assert.equal(resolveReference({ ...reference, line: 1 }, sources).line, 1);
+  assert.equal(resolveReference({ ...reference, line: 1 }, sources).stale, false);
+  assert.equal(resolveReference({ ...reference, match: 'return 42' }, sources).line, null);
+  assert.equal(resolveReference(reference, sources).line, null);
+  assert.equal(resolveReference({ ...reference, line: 99 }, sources).line, null);
+  assert.equal(resolveReference({ ...reference, line: 1, endLine: 99 }, sources).line, null);
+  assert.equal(resolveReference({ ...reference, line: 1, hash: 'old' }, sources).stale, true);
+  assert.equal(resolveReference({ ...reference, line: 1 }, {}).stale, true);
+});
+
+// Verify generated inline markers become structured evidence without changing identifiers.
+test('inline citation markers become deduplicated evidence without changing source identifiers', () => {
   const original = {
     path: 'src',
     title: '`Source` [src/main.ts:1]',

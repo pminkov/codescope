@@ -1,4 +1,4 @@
-// Keep generated prose separate from evidence, including old saved analyses.
+// Recognize inline source markers returned despite the structured evidence schema.
 const citationPattern = /\[([^\]\r\n]+?):L?(\d+)(?:-L?(\d+))?\]/g;
 const labels = new Set([
   'title',
@@ -24,6 +24,8 @@ const protectedFields = new Set([
   'requestedScope',
   'stack',
   'baseline',
+  'coverage',
+  'modificationPrompts',
   'nextPrompts',
 ]);
 
@@ -60,7 +62,7 @@ export function extractCitations(value, { knownPaths = new Set(), hashes = {} } 
 }
 
 // Deduplicate citations by file and line range.
-export function uniqueSources(sources) {
+function uniqueSources(sources) {
   const seen = new Set();
   return sources.filter(
     // Keep the first occurrence of each source range.

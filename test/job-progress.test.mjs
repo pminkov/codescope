@@ -61,18 +61,19 @@ test('finished progress expires five minutes after execution, including on reloa
   }
 });
 
-// Never expire active work or guess an end time when legacy timestamps are missing.
-test('progress expiration respects active jobs and legacy completion timestamps', () => {
+// Never expire active work or guess a missing completion time from later updates.
+test('progress expiration respects active jobs and requires a completion timestamp', () => {
   const now = Date.parse('2026-11-20T12:00:00Z');
   const job = {
-    id: 'legacy', kind: 'flow', status: 'completed', updatedAt: '2026-11-19T12:00:00Z',
+    id: 'finished', kind: 'flow', status: 'completed', finishedAt: '2026-11-19T12:00:00Z',
   };
   assert.equal(getJobDismissalDelay(job, now), 0);
   assert.equal(createJobDismissals({}).isDismissed('project', job, now), true);
 
   for (const next of [null, { ...job, status: 'queued' }, { ...job, status: 'running' },
-    { ...job, kind: 'index' }, { ...job, updatedAt: undefined },
-    { ...job, updatedAt: 'invalid' }]) {
+    { ...job, kind: 'index' }, { ...job, finishedAt: undefined },
+    { ...job, finishedAt: 'invalid' },
+    { ...job, finishedAt: undefined, updatedAt: job.finishedAt }]) {
     assert.equal(getJobDismissalDelay(next, now), null);
     assert.equal(createJobDismissals({}).isDismissed('project', next, now), false);
   }
@@ -125,38 +126,36 @@ test('elapsed time freezes on completion, failure, cancellation, and interruptio
   }
   assert.equal(formatJobElapsed({
     status: 'failed', startedAt: '2026-11-19T12:00:00Z', updatedAt: '2026-11-19T12:00:45Z',
-  }), '00:45');
+  }), '00:00');
 });
 
-// Keep chronological order, bound old records, and retain legacy progress text.
+// Keep chronological order and bound displayed history without mutating saved records.
 test('job message presentation preserves the latest four without mutating saved history', () => {
-  const job = { messages: ['One', 'Two', 'Three', 'Four', 'Five'], message: 'Six' };
+  const timestamp = '2026-11-19T23:07:09.123Z';
+  const job = { messages: [
+    { message: 'One', timestamp }, { message: 'Two', timestamp },
+    { message: 'Three', timestamp }, { message: 'Four', timestamp },
+    { message: 'Five', timestamp },
+  ], message: 'Five' };
+  const saved = structuredClone(job);
   assert.deepEqual(getJobMessages(job), [
-    { message: 'Three', timestamp: null }, { message: 'Four', timestamp: null },
-    { message: 'Five', timestamp: null }, { message: 'Six', timestamp: null },
+    { message: 'Two', timestamp }, { message: 'Three', timestamp },
+    { message: 'Four', timestamp }, { message: 'Five', timestamp },
   ]);
-  assert.deepEqual(job.messages, ['One', 'Two', 'Three', 'Four', 'Five']);
-  assert.deepEqual(getJobMessages({ messages: ['One', 'Two'], message: 'Two' }), [
-    { message: 'One', timestamp: null }, { message: 'Two', timestamp: null },
-  ]);
-  assert.deepEqual(getJobMessages({ message: 'Legacy progress' }), [{ message: 'Legacy progress', timestamp: null }]);
-  assert.deepEqual(getJobMessages({ messages: [null, '', '  ', 'Valid'], message: 'Latest' }), [
-    { message: 'Valid', timestamp: null }, { message: 'Latest', timestamp: null },
-  ]);
+  assert.deepEqual(job, saved);
+  assert.notEqual(getJobMessages(job), job.messages);
+  assert.deepEqual(getJobMessages({ messages: [] }), []);
   assert.deepEqual(getJobMessages(null), []);
 });
 
 // Preserve recorded instants through reloads and visibly distinguish missing history.
-test('message timestamps retain seconds and normalize mixed historical records', () => {
+test('message timestamps retain recorded seconds and handle invalid display values', () => {
   const timestamp = '2026-11-19T23:07:09.123Z';
-  const job = { messages: ['Legacy', { message: 'Recorded', timestamp }], message: 'Recorded' };
+  const job = { messages: [{ message: 'Recorded', timestamp }], message: 'Recorded' };
   assert.deepEqual(getJobMessages(job), [
-    { message: 'Legacy', timestamp: null }, { message: 'Recorded', timestamp },
+    { message: 'Recorded', timestamp },
   ]);
   assert.match(formatJobMessageTime(timestamp), /^\d{2}:\d{2}:09$/);
   assert.equal(formatJobMessageTime(null), '--:--:--');
   assert.equal(formatJobMessageTime('invalid'), '--:--:--');
-  assert.deepEqual(getJobMessages({ messages: [{ message: 'Bad time', timestamp: 'invalid' }] }), [
-    { message: 'Bad time', timestamp: null },
-  ]);
 });

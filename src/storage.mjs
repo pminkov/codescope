@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, rename, readdir, lstat, rm } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, readdir, rm } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validateRoot, indexProject, projectView, fail } from './analysis.mjs';
@@ -99,15 +99,11 @@ function copiedAnalysisTitle(entries, title) {
   return name;
 }
 
-// Keep the four latest distinct progress updates, including legacy jobs' current text.
+// Keep the four latest distinct progress updates with their recorded timestamps.
 function recordJobMessage(job, message, timestamp = new Date().toISOString()) {
-  const messages = Array.isArray(job.messages) ? job.messages.slice(-4).map(
-    // Preserve older text-only entries without inventing historical timestamps.
-    (entry) => typeof entry === 'string' ? { message: entry, timestamp: null } : entry,
-  ) : job.message ? [{ message: job.message, timestamp: null }] : [];
-  if (messages.at(-1)?.message !== message) messages.push({ message, timestamp });
+  if (job.messages.at(-1)?.message !== message) job.messages.push({ message, timestamp });
   job.message = message;
-  job.messages = messages.slice(-4);
+  job.messages = job.messages.slice(-4);
 }
 
 // Normalize a source directory name for use in storage paths and project URLs.
@@ -206,57 +202,6 @@ function mergeStageResult(understanding, result, stage, job, index, snapshot) {
   return key;
 }
 
-// Recover historical inventories without substituting today's source hashes.
-function migrateAnalysisBaseline(analysis, review, legacyPaths, indexes) {
-  if (!analysis || analysis.baseline || !review) return analysis;
-  const analyzedAt = Date.parse(review.reviewedAt);
-  const historical = indexes.find(
-    // Only the job running when this result was saved can supply missing hashes.
-    ({ index, job }) => index?.files && job &&
-      Date.parse(index.indexedAt) >= Date.parse(job.startedAt) &&
-      Date.parse(index.indexedAt) <= analyzedAt &&
-      Date.parse(job.startedAt) <= analyzedAt &&
-      Date.parse(job.finishedAt || job.updatedAt) >= analyzedAt,
-  );
-  const matchingIndex = historical?.index;
-  const paths = review.indexedPaths || (matchingIndex
-    ? Object.keys(matchingIndex.files)
-    : legacyPaths || Object.keys(review.files || {}));
-  const files = Object.fromEntries(paths.map(
-    // Null preserves a historical filename whose original hash was not retained.
-    (path) => [path, matchingIndex?.files[path] ?? null],
-  ));
-
-  return {
-    ...analysis,
-    ...(historical?.job.coverage ? { coverage: historical.job.coverage } : {}),
-    baseline: { files: { ...files, ...review.files }, analyzedAt: review.reviewedAt },
-  };
-}
-
-// Move the legacy overview into the same ordered list as every other diagram.
-function migrateArchitectureList(understanding) {
-  if (!Object.hasOwn(understanding, 'architecture')) return;
-  const graphs = understanding.architectures ||= [];
-  if (understanding.architecture) {
-    const overview = graphs.find(
-      // Preserve an already migrated diagram, including any subsequent node edits.
-      (graph) => graph.id === 'overview',
-    ) || {
-      ...understanding.architecture,
-      id: 'overview',
-      requestedQuestion: null,
-      createdAt: understanding.architecture.createdAt ||
-        understanding.architecture.baseline?.analyzedAt,
-    };
-    understanding.architectures = [overview, ...graphs.filter(
-      // Keep one overview at the front without changing focused diagrams or their IDs.
-      (graph) => graph.id !== 'overview',
-    )];
-  }
-  delete understanding.architecture;
-}
-
 // Coordinate registered projects, saved analyses, background jobs, and serialized edits.
 export class ProjectStore {
   // Initialize storage paths, queue state, and asynchronous registry loading.
@@ -285,7 +230,6 @@ export class ProjectStore {
   async initialize() {
     const registry = await readJson(resolve(this.directory, 'projects.json'), null);
     this.projects = registry || [];
-    await this.migrateProjectIds();
 
     for (const project of this.projects) {
       if (isJobActive(project.job)) {
@@ -295,74 +239,12 @@ export class ProjectStore {
       }
 
       const directory = await prepareJobHistory(this.path(project.id, '.'));
-      await this.migrateUnderstanding(project.id, directory, project.job);
       if (project.job?.startedAt && /^[a-zA-Z0-9_-]+$/.test(project.job.id))
         await writeJson(resolve(directory, project.job.id, 'job.json'), project.job);
       await pruneJobHistory(directory, project.job?.id);
     }
 
     await this.saveRegistry();
-  }
-
-  // Migrate legacy baselines and diagrams before removing obsolete saved fields.
-  async migrateUnderstanding(id, historyDirectory, job) {
-    const path = this.path(id, 'understanding.json');
-    const understanding = await readJson(path, null);
-    const legacyIndexPath = this.path(id, 'index.json');
-    if (!understanding) {
-      await rm(legacyIndexPath, { force: true });
-
-      return;
-    }
-    const legacyKeys = ['summary', 'sources', 'stack', 'scope', 'directories', 'files'];
-    const legacyDirectories = legacyKeys.some(
-      // Directory results used to be spread across top-level fields.
-      (key) => key in understanding,
-    );
-    const legacyBaselines = 'reviews' in understanding || legacyDirectories;
-    if (!legacyBaselines && !Object.hasOwn(understanding, 'architecture')) {
-      await rm(legacyIndexPath, { force: true });
-
-      return;
-    }
-
-    const indexes = [];
-    if (legacyBaselines) {
-      for (const entry of await readdir(historyDirectory, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        const directory = resolve(historyDirectory, entry.name);
-        indexes.push({
-          index: await readJson(resolve(directory, 'index.json'), null),
-          job: await readJson(resolve(directory, 'job.json'), null),
-        });
-      }
-      indexes.push({ index: await readJson(legacyIndexPath, null), job });
-    }
-    const reviews = understanding.reviews || {};
-
-    // Attach the best historical baseline to one result without changing its prose.
-    const migrateAnalysis = (analysis, key) => migrateAnalysisBaseline(
-      analysis, reviews[key], understanding.analyzedPaths, indexes,
-    );
-    if (!understanding.directoryAnalysis && legacyDirectories) {
-      const directories = {};
-      for (const key of legacyKeys)
-        if (key in understanding) directories[key] = understanding[key];
-      understanding.directoryAnalysis = migrateAnalysis(directories, 'directories');
-    }
-    if (understanding.architecture)
-      understanding.architecture = migrateAnalysis(understanding.architecture, 'architecture');
-    for (const key of ['architectures', 'flows', 'nounAnalyses'])
-      if (understanding[key]) understanding[key] = understanding[key].map(
-        // Each saved view retains its own historical evidence and inventory.
-        (analysis) => migrateAnalysis(analysis, analysis.id),
-      );
-
-    migrateArchitectureList(understanding);
-    for (const key of [...legacyKeys, 'reviews', 'analyzedPaths', 'analyzedAt', 'coverage'])
-      delete understanding[key];
-    await writeJson(path, understanding);
-    await rm(legacyIndexPath, { force: true });
   }
 
   // Collect names that are already owned by projects or existing storage entries.
@@ -386,67 +268,6 @@ export class ProjectStore {
         (name) => name.toLowerCase(),
       ),
     );
-  }
-
-  // Resume recorded renames before switching the registry to readable project IDs.
-  async migrateProjectIds() {
-    const migrationPath = resolve(this.directory, 'project-id-migration.json');
-    let migration = await readJson(migrationPath, null);
-
-    if (!migration) {
-      const usedNames = await this.usedProjectNames();
-      migration = [];
-
-      for (const project of this.projects) {
-        if (project.idFormat === 'directory') continue;
-        const newId = project.id === projectIdBase(project.root)
-          ? project.id
-          : allocateProjectId(project.root, usedNames);
-        migration.push({ oldId: project.id, newId });
-        usedNames.add(newId.toLowerCase());
-      }
-
-      if (!migration.length) return;
-      // Persist the plan first so a restart can locate directories already moved.
-      await writeJson(migrationPath, migration);
-    }
-
-    for (const { oldId, newId } of migration) {
-      if (oldId === newId) continue;
-      const source = this.path(oldId, '.');
-      const destination = this.path(newId, '.');
-      let sourceExists = false;
-      let destinationExists = false;
-
-      try {
-        await lstat(source);
-        sourceExists = true;
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-      }
-
-      try {
-        await lstat(destination);
-        destinationExists = true;
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-      }
-
-      if (sourceExists && destinationExists)
-        throw new Error(`Cannot migrate project: storage directory ${newId} already exists.`);
-      if (sourceExists) await rename(source, destination);
-    }
-
-    for (const project of this.projects) {
-      const entry = migration.find(
-        // A saved registry may already contain the new ID after a partial startup.
-        ({ oldId, newId }) => project.id === oldId || project.id === newId,
-      );
-      if (entry) Object.assign(project, { id: entry.newId, idFormat: 'directory' });
-    }
-
-    await this.saveRegistry();
-    await rm(migrationPath);
   }
 
   // Serialize registry writes so concurrent updates preserve their order.
@@ -535,7 +356,6 @@ export class ProjectStore {
     for (const project of this.projects) usedNames.add(project.id.toLowerCase());
     const project = {
       id: allocateProjectId(root, usedNames),
-      idFormat: 'directory',
       name: this.validateProjectName(name?.trim() || basename(root)),
       root,
       createdAt: new Date().toISOString(),

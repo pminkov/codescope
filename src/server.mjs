@@ -233,20 +233,6 @@ export function createApp({
           return await handleProjectRequest(request, url, match, store, json);
         }
 
-        // Compatibility for the original single-project API; new clients use IDs.
-        if (['/api/project', '/api/source'].includes(url.pathname)) {
-          if (request.method === 'POST') throw fail('Method not allowed.', 405);
-          const first = (await store.list())[0];
-          if (!first) throw fail('Add a project to get started.', 404);
-          const view = await store.view(first.id);
-
-          return json(
-            url.pathname === '/api/source'
-              ? await readSource(view.root, url.searchParams.get('path'), view.tree)
-              : view,
-          );
-        }
-
         if (request.method === 'POST') throw fail('Not found.', 404);
         const asset = pageRoute.test(url.pathname) ? assets['/'] : assets[url.pathname];
         if (!asset) throw fail('Not found.', 404);

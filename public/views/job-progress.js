@@ -4,13 +4,11 @@ import { formatJobElapsed, formatJobMessageTime } from '../job-progress.js';
 
 // Render one recorded message with its original timestamp and arrival animation.
 function renderJobMessage({ message, timestamp }, animate) {
-  const timeAttribute = timestamp
-    ? `datetime="${escape(timestamp)}"`
-    : 'title="Timestamp unavailable for this older message"';
-
   return /* HTML */ `
     <li ${animate ? 'class="job-message-new"' : ''}>
-      <time class="job-message-time" ${timeAttribute}>${formatJobMessageTime(timestamp)}</time>
+      <time class="job-message-time" datetime="${escape(timestamp)}">
+        ${formatJobMessageTime(timestamp)}
+      </time>
       <span>${escape(message)}</span>
     </li>
   `;

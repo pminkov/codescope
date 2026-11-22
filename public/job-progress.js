@@ -7,7 +7,7 @@ function canDismissJob(job) {
 // Keep finished progress visible for five minutes after execution ends.
 export function getJobDismissalDelay(job, now = Date.now()) {
   if (!canDismissJob(job)) return null;
-  const finished = Date.parse(job.finishedAt || job.updatedAt);
+  const finished = Date.parse(job.finishedAt);
 
   return Number.isFinite(finished) ? Math.max(0, finished + 5 * 60 * 1000 - now) : null;
 }
@@ -53,30 +53,16 @@ export function createJobDismissals(storageHost = globalThis) {
 export function formatJobElapsed(job, now = Date.now()) {
   const start = Date.parse(job?.startedAt);
   const end = ['queued', 'running'].includes(job?.status) ? now
-    : Date.parse(job?.finishedAt || job?.updatedAt);
+    : Date.parse(job?.finishedAt);
   const seconds = Number.isFinite(start) && Number.isFinite(end)
     ? Math.max(0, Math.floor((end - start) / 1000)) : 0;
 
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-// Present a bounded history while retaining progress from older server versions.
+// Present the latest four structured progress messages without changing saved history.
 export function getJobMessages(job) {
-  const messages = Array.isArray(job?.messages) ? job.messages.flatMap(
-    // Normalize text-only history and validate recorded times before presenting them.
-    (entry) => {
-      const message = typeof entry === 'string' ? entry : entry?.message;
-      if (typeof message !== 'string' || !message.trim()) return [];
-      const timestamp = typeof entry?.timestamp === 'string' &&
-        Number.isFinite(Date.parse(entry.timestamp)) ? entry.timestamp : null;
-
-      return [{ message, timestamp }];
-    },
-  ) : [];
-  if (job?.message && messages.at(-1)?.message !== job.message)
-    messages.push({ message: job.message, timestamp: null });
-
-  return messages.slice(-4);
+  return job ? job.messages.slice(-4) : [];
 }
 
 // Show each message's recorded local clock time with hours, minutes, and seconds.
