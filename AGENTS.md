@@ -26,3 +26,10 @@
   and exact source-preview and textarea contents when reformatting; formatting whitespace
   can change rendered text. Compact literals are appropriate for whitespace-sensitive HTML.
 - Register new browser modules in the server's explicit asset allowlist.
+
+# Design drafts
+
+- Store design explorations, mockups, typography experiments, and other review-only
+  artifacts under `drafts/`. Use `drafts/design/` for UI mockups and `drafts/fonts/`
+  for typography experiments, following the existing organization.
+- Do not create `output/` or other top-level folders for draft work.
