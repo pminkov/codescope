@@ -78,6 +78,9 @@ const icons = {
   delete: /* HTML */ `
     <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
   `,
+  close: /* HTML */ `
+    <path d="m6 6 12 12M6 18 18 6" />
+  `,
   down: /* HTML */ `
     <path d="m6 9 6 6 6-6" />
   `,

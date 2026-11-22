@@ -18,7 +18,7 @@ export function renderAnalysisFreshness(review) {
     : '';
 }
 
-// Place the source comparison count immediately after the selected analysis's Actions menu.
+// Place the source comparison count immediately before the selected analysis's Actions menu.
 export function renderAnalysisControls(kind, id, { review, ...options }) {
   let changes = '';
   if (review?.available) {
@@ -46,8 +46,8 @@ export function renderAnalysisControls(kind, id, { review, ...options }) {
 
   return /* HTML */ `
     <div class="analysis-header-controls">
-      ${renderAnalysisMenu(kind, id, options)}
       ${changes}
+      ${renderAnalysisMenu(kind, id, options)}
     </div>
   `;
 }

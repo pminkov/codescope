@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createJobDismissals, formatJobElapsed, formatJobMessageTime, getJobMessages,
-  getJobDismissalDelay, getCompletedJobTargets,
+  getJobDismissalDelay, getJobAnalysisTargets,
 } from '../public/job-progress.js';
 
 // Preserve manual closure without hiding new jobs, another project, or active work.
@@ -171,11 +171,11 @@ test('completed job targets preserve exact new, rerun, and modified result selec
       job: { status: 'completed', kind, resultId: 'completed-result' },
     };
     const expected = [{ tab, selection: 'completed-result', label: 'Open analysis' }];
-    assert.deepEqual(getCompletedJobTargets(project), expected);
+    assert.deepEqual(getJobAnalysisTargets(project), expected);
     project.job = { status: 'completed', kind, analysisId: 'completed-result' };
-    assert.deepEqual(getCompletedJobTargets(project), expected);
+    assert.deepEqual(getJobAnalysisTargets(project), expected);
     project.job.modificationPrompt = 'Simplify the explanation.';
-    assert.deepEqual(getCompletedJobTargets(project), expected);
+    assert.deepEqual(getJobAnalysisTargets(project), expected);
   }
 });
 
@@ -187,28 +187,59 @@ test('completed initial and directory jobs link to their available saved analyse
     job: { status: 'completed', kind: 'initial' },
   };
   const directories = { tab: 'directories', selection: '', label: 'Open directories' };
-  assert.deepEqual(getCompletedJobTargets(project), [directories, {
+  assert.deepEqual(getJobAnalysisTargets(project), [directories, {
     tab: 'architecture', selection: 'overview', label: 'Open architecture',
   }]);
   project.job.kind = 'directories';
-  assert.deepEqual(getCompletedJobTargets(project), [directories]);
+  assert.deepEqual(getJobAnalysisTargets(project), [directories]);
   project.hasDirectoryAnalysis = false;
-  assert.deepEqual(getCompletedJobTargets(project), []);
+  assert.deepEqual(getJobAnalysisTargets(project), []);
 });
 
-// Missing IDs, deleted results, and unfinished jobs never point to another saved analysis.
+// Missing IDs, deleted results, and failed jobs never point to another saved analysis.
 test('completed job targets omit unavailable results and unsuccessful jobs', () => {
   const project = {
     architectures: [{ id: 'other' }], hasDirectoryAnalysis: true,
     job: { kind: 'architecture', status: 'completed', resultId: 'deleted' },
   };
-  assert.deepEqual(getCompletedJobTargets(project), []);
+  assert.deepEqual(getJobAnalysisTargets(project), []);
   delete project.job.resultId;
-  assert.deepEqual(getCompletedJobTargets(project), []);
-  for (const status of ['queued', 'running', 'failed', 'cancelled', 'interrupted']) {
+  assert.deepEqual(getJobAnalysisTargets(project), []);
+  for (const status of ['failed', 'cancelled', 'interrupted']) {
     project.job = { kind: 'initial', status };
-    assert.deepEqual(getCompletedJobTargets(project), []);
+    assert.deepEqual(getJobAnalysisTargets(project), []);
   }
-  assert.deepEqual(getCompletedJobTargets({ job: { kind: 'index', status: 'completed' } }), []);
-  assert.deepEqual(getCompletedJobTargets(null), []);
+  assert.deepEqual(getJobAnalysisTargets({ job: { kind: 'index', status: 'completed' } }), []);
+  assert.deepEqual(getJobAnalysisTargets(null), []);
+});
+
+// Active runs open their view immediately and retain exact saved targets for reruns.
+test('queued and running jobs expose analysis navigation before completion', () => {
+  for (const status of ['queued', 'running']) {
+    for (const [kind, collection, tab] of [
+      ['architecture', 'architectures', 'architecture'], ['flow', 'flows', 'flows'],
+      ['nouns', 'nounAnalyses', 'nouns'], ['sequence', 'sequences', 'sequences'],
+    ]) {
+      const project = { job: { kind, status }, [collection]: [{ id: 'other-result' }] };
+      assert.deepEqual(getJobAnalysisTargets(project), [{
+        tab, selection: '', label: 'Open analysis',
+      }]);
+      project.job.analysisId = 'other-result';
+      assert.deepEqual(getJobAnalysisTargets(project), [{
+        tab, selection: 'other-result', label: 'Open analysis',
+      }]);
+      project.job.modificationPrompt = 'Simplify this result.';
+      assert.equal(getJobAnalysisTargets(project)[0].selection, 'other-result');
+      project[collection].push({ id: 'new-result' });
+      project.job.resultId = 'new-result';
+      assert.equal(getJobAnalysisTargets(project)[0].selection, 'new-result');
+    }
+    const project = { job: { kind: 'initial', status } };
+    const directories = { tab: 'directories', selection: '', label: 'Open directories' };
+    assert.deepEqual(getJobAnalysisTargets(project), [directories, {
+      tab: 'architecture', selection: '', label: 'Open architecture',
+    }]);
+    project.job.kind = 'directories';
+    assert.deepEqual(getJobAnalysisTargets(project), [directories]);
+  }
 });

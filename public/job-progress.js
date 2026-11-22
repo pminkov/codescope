@@ -1,9 +1,10 @@
-// Locate only the saved results produced by the current completed job.
-export function getCompletedJobTargets(project) {
+// Locate an active analysis view or the exact saved result of a completed job.
+export function getJobAnalysisTargets(project) {
   const job = project?.job;
-  if (job?.status !== 'completed') return [];
+  if (!['queued', 'running', 'completed'].includes(job?.status)) return [];
+  const active = ['queued', 'running'].includes(job.status);
   const targets = [];
-  if (['initial', 'directories'].includes(job.kind) && project.hasDirectoryAnalysis)
+  if (['initial', 'directories'].includes(job.kind) && (active || project.hasDirectoryAnalysis))
     targets.push({ tab: 'directories', selection: '', label: 'Open directories' });
 
   const kinds = {
@@ -21,8 +22,10 @@ export function getCompletedJobTargets(project) {
     // Deleted results must not link to an unrelated default selection.
     (analysis) => analysis.id === id,
   );
-  if (exists) targets.push({
-    tab, selection: id, label: job.kind === 'initial' ? 'Open architecture' : 'Open analysis',
+  // New runs can open their view before a saved result exists.
+  if (exists || active) targets.push({
+    tab, selection: exists ? id : '',
+    label: job.kind === 'initial' ? 'Open architecture' : 'Open analysis',
   });
 
   return targets;

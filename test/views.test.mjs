@@ -280,21 +280,37 @@ test('progress cards retain retry, close, cancellation, and message presentation
   assert.doesNotMatch(running, /data-action="retry"|data-action="dismiss-job"/);
 });
 
-// Result links remain usable from any view and never appear before successful completion.
-test('completed progress cards expose escaped links to their saved results', () => {
-  const job = { kind: 'sequence', status: 'completed' };
+// Progress actions share a dropdown with result navigation during and after a run.
+test('progress dropdowns expose escaped result links and state-appropriate controls', () => {
   const options = {
-    busy: false, completed: true, messages: [], newMessage: false, jobTypeLabels: {},
+    messages: [], newMessage: false, jobTypeLabels: {},
     resultLinks: [{ href: '/projects/demo/sequences/result?x=1&y=2', label: 'Open <analysis>' }],
   };
-  const html = renderJobProgress(job, options);
-  assert.match(html, /href="\/projects\/demo\/sequences\/result\?x=1&amp;y=2"/);
-  assert.match(html, /Open &lt;analysis&gt;/);
-  assert.match(html, /data-action="dismiss-job"/);
-  for (const status of ['queued', 'running', 'failed', 'cancelled', 'interrupted']) {
-    const unfinished = renderJobProgress({ ...job, status }, {
-      ...options, completed: false, busy: ['queued', 'running'].includes(status),
+  for (const status of ['queued', 'running', 'completed']) {
+    const html = renderJobProgress({ kind: 'sequence', status }, {
+      ...options, busy: status !== 'completed', completed: status === 'completed',
     });
-    assert.doesNotMatch(unfinished, /href=/);
+    const dropdown = html.match(/<details class="job-actions actions-dropdown"[\s\S]*?<\/details>/);
+    assert.ok(dropdown);
+    assert.match(dropdown[0], /<summary class="button">Actions/);
+    assert.match(dropdown[0], /aria-label="Analysis progress actions"/);
+    assert.match(dropdown[0], /href="\/projects\/demo\/sequences\/result\?x=1&amp;y=2"/);
+    assert.match(dropdown[0], /Open &lt;analysis&gt;/);
+    assert.match(dropdown[0], /data-action="view-prompt"/);
+    assert.match(dropdown[0], status === 'completed'
+      ? /data-action="dismiss-job"/ : /data-action="cancel"/);
+    assert.doesNotMatch(html.replace(dropdown[0], ''), /href=|data-action=/);
   }
+  for (const status of ['failed', 'cancelled', 'interrupted']) {
+    const html = renderJobProgress({ kind: 'sequence', status }, {
+      ...options, resultLinks: [], busy: false, completed: false,
+    });
+    assert.doesNotMatch(html, /href=/);
+    assert.match(html, /data-action="retry"/);
+    assert.match(html, /data-action="dismiss-job"/);
+  }
+  const refreshed = renderJobProgress({ kind: 'sequence', status: 'running' }, {
+    ...options, busy: true, completed: false, actionsOpen: true,
+  });
+  assert.match(refreshed, /<details class="job-actions actions-dropdown" open>/);
 });

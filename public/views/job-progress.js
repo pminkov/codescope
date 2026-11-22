@@ -14,9 +14,65 @@ function renderJobMessage({ message, timestamp }, animate) {
   `;
 }
 
+// Group result navigation and progress controls in the shared Actions dropdown.
+function renderJobActions(job, { busy, resultLinks, actionsOpen }) {
+  const retry = ['failed', 'cancelled', 'interrupted'].includes(job.status);
+
+  return /* HTML */ `
+    <details class="job-actions actions-dropdown" ${actionsOpen ? 'open' : ''}>
+      <summary class="button">Actions ${renderIcon('down')}</summary>
+      <div class="actions-menu" role="group" aria-label="Analysis progress actions">
+        ${resultLinks.map(
+          // Ordinary links retain new-tab and copy-link behavior during and after a run.
+          (link) => /* HTML */ `
+            <a href="${escape(link.href)}">
+              ${renderIcon('arrow')}
+              <span>
+                <strong>${escape(link.label)}</strong>
+                <small>Go to this analysis</small>
+              </span>
+            </a>
+          `,
+        ).join('')}
+        <button
+          type="button"
+          data-action="view-prompt"
+          aria-haspopup="dialog"
+          aria-controls="job-prompts-dialog"
+        >
+          ${renderIcon('file')}
+          <span><strong>View prompt</strong><small>Inspect the analysis input</small></span>
+        </button>
+        ${retry ? /* HTML */ `
+          <button type="button" data-action="retry">
+            ${renderIcon('rerun')}
+            <span><strong>Retry</strong><small>Run this analysis again</small></span>
+          </button>
+        ` : ''}
+        <div class="actions-divider"></div>
+        ${busy ? /* HTML */ `
+          <button type="button" data-action="cancel">
+            ${renderIcon('close')}
+            <span><strong>Cancel</strong><small>Stop the current analysis</small></span>
+          </button>
+        ` : /* HTML */ `
+          <button
+            type="button"
+            data-action="dismiss-job"
+            aria-label="Close analysis progress"
+          >
+            ${renderIcon('close')}
+            <span><strong>Close</strong><small>Hide this progress card</small></span>
+          </button>
+        `}
+      </div>
+    </details>
+  `;
+}
+
 // Render progress without changing timers, dismissal state, or message history.
 export function renderJobProgress(job, {
-  busy, completed, messages, newMessage, jobTypeLabels, resultLinks = [],
+  busy, completed, messages, newMessage, jobTypeLabels, resultLinks = [], actionsOpen = false,
 }) {
   const stateClass = busy ? 'job-active' : completed ? 'job-completed' : '';
   const failedClass = ['failed', 'interrupted'].includes(job.status) ? 'job-failed' : '';
@@ -68,44 +124,7 @@ export function renderJobProgress(job, {
         }
       </div>
       <div class="job-controls">
-        ${completed ? resultLinks.map(
-          // Ordinary links support in-app navigation, new tabs, and copying the result URL.
-          (link) => /* HTML */ `
-            <a class="button primary" href="${escape(link.href)}">${escape(link.label)}</a>
-          `,
-        ).join('') : ''}
-        <button
-          type="button"
-          class="button"
-          data-action="view-prompt"
-          aria-haspopup="dialog"
-          aria-controls="job-prompts-dialog"
-        >
-          View prompt
-        </button>
-        ${
-          busy
-            ? /* HTML */ `
-                <button class="button" data-action="cancel">Cancel</button>
-              `
-            : /* HTML */ `
-                ${
-                  ['failed', 'cancelled', 'interrupted'].includes(job.status)
-                    ? /* HTML */ `
-                        <button class="button" data-action="retry">Retry</button>
-                      `
-                    : ''
-                }
-                <button
-                  type="button"
-                  class="button ${completed && !resultLinks.length ? 'primary' : ''}"
-                  data-action="dismiss-job"
-                  aria-label="Close analysis progress"
-                >
-                  Close
-                </button>
-              `
-        }
+        ${renderJobActions(job, { busy, resultLinks, actionsOpen })}
       </div>
     </div>
   `;

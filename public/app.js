@@ -19,7 +19,7 @@ import {
   formatJobElapsed,
   getJobMessages,
   getJobDismissalDelay,
-  getCompletedJobTargets,
+  getJobAnalysisTargets,
 } from './job-progress.js';
 import { setupSequenceZoom } from './sequence-diagram.js';
 import { routeGraphEdges } from './graph-routing.js';
@@ -898,8 +898,8 @@ function renderJob() {
   const busy = ['queued', 'running'].includes(job.status);
   const completed = job.status === 'completed';
   const messages = getJobMessages(job);
-  const resultLinks = getCompletedJobTargets(data).map(
-    // Route to the exact completed result regardless of the currently selected view.
+  const resultLinks = getJobAnalysisTargets(data).map(
+    // Open the active analysis view or its saved result from any other tab.
     (target) => ({
       href: projectUrl(target.tab, target.selection),
       label: target.label,
@@ -929,6 +929,8 @@ function renderJob() {
       newMessage,
       jobTypeLabels,
       resultLinks,
+      actionsOpen: panel.dataset.jobId === job.id &&
+        Boolean(panel.querySelector('.job-actions[open]')),
     });
     panel.dataset.signature = signature;
     panel.dataset.jobId = job.id;
@@ -1625,6 +1627,7 @@ document.addEventListener('click', (event) => {
     !link.target &&
     !link.hasAttribute('download')
   ) {
+    link.closest('.job-actions')?.removeAttribute('open');
     const url = new URL(link.href, location.href);
     if (url.origin === location.origin && isProjectViewUrl(url.pathname)) {
       event.preventDefault();
@@ -1636,6 +1639,7 @@ document.addEventListener('click', (event) => {
 
   const action = event.target.closest('[data-action]');
   if (action) {
+    action.closest('.job-actions')?.removeAttribute('open');
     if (action.dataset.action === 'add') showAddProject();
     else if (action.dataset.action === 'view-prompt') openJobPrompts();
     else if (action.dataset.action === 'dismiss-job') dismissJobProgress();
