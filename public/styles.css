@@ -173,6 +173,9 @@ h1 { min-width: 0; overflow-wrap: anywhere; font-size: 1.8125rem; line-height: 1
 .sidebar-heading h2 { margin: 0; font-size: 1rem; font-weight: 550; letter-spacing: .1px; }
 .tiny-label { font: 0.8125rem ui-monospace, SFMono-Regular, monospace; letter-spacing: .7px; color: var(--faint); }
 .search-field { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 5px; margin: 20px 0 18px; background: var(--panel); color: var(--faint); }
+.directory-workspace .search-field { margin-top: 0; }
+/* Start directory navigation at the same height as its overview heading. */
+@media (min-width: 801px) { .directory-workspace > .sidebar { padding: var(--analysis-content-padding); padding-inline: 17px; } }
 .search-field .icon { width: 14px; height: 14px; }
 .search-field input { width: 100%; min-width: 0; background: transparent; border: 0; outline: none; color: var(--text); font-size: 1rem; }
 .search-field:focus-within { border-color: var(--green-line); }

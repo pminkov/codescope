@@ -420,7 +420,7 @@ function renderDirectoryContent(node) {
     (child) => child.type === 'file',
   );
 
-  return `<div class="content-heading"><div><div class="eyebrow">DIRECTORY OVERVIEW <span>/</span> ${escape(node.kind)}</div><h2>${escape(node.title)}</h2><p class="lead">${formatText(node.description)}</p></div>${renderAnalysisMenu('directories', 'directories')}</div>
+  return `<div class="content-heading"><div><div class="eyebrow">DIRECTORY OVERVIEW${node.path !== data.tree.path ? ` <span>/</span> ${escape(node.kind)}` : ''}</div><h2>${escape(node.title)}</h2><p class="lead">${formatText(node.description)}</p></div>${renderAnalysisMenu('directories', 'directories')}</div>
     ${renderDirectoryAnalysisControls()}
     <div class="directory-summary"><p>${formatText(node.detail || node.description)}</p><div class="directory-stats"><div><strong>${node.fileCount}</strong><span>${node.fileCount === 1 ? 'file' : 'files'} inside</span></div><div><strong>${folders.length}</strong><span>subdirectories</span></div><div><strong>${files.length}</strong><span>direct ${files.length === 1 ? 'file' : 'files'}</span></div></div></div>
     ${
@@ -456,7 +456,7 @@ function renderDirectories() {
     expanded.add(segments.slice(0, index).join('/'));
 
   selectElement('#view').innerHTML =
-    `<div class="workspace directory-workspace"><aside class="sidebar" aria-label="Directory navigation"><div class="sidebar-heading"><h2>Repository structure</h2><span class="tiny-label">${data.stats.directories} DIRS</span></div><label class="search-field">${renderIcon('search')}<input id="directory-search" type="search" placeholder="Find a directory…" aria-label="Find a directory" value="${escape(query)}"><kbd>/</kbd></label><div id="tree-container"><ul class="tree">${renderTree(data.tree, node.path)}</ul></div></aside><article class="directory-content">${renderDirectoryContent(node)}</article></div>`;
+    `<div class="workspace directory-workspace"><aside class="sidebar" aria-label="Directory navigation"><label class="search-field">${renderIcon('search')}<input id="directory-search" type="search" placeholder="Find a directory…" aria-label="Find a directory" value="${escape(query)}"><kbd>/</kbd></label><div id="tree-container"><ul class="tree">${renderTree(data.tree, node.path)}</ul></div></aside><article class="directory-content">${renderDirectoryContent(node)}</article></div>`;
   // Refresh only the directory tree when the search query changes.
   selectElement('#directory-search').addEventListener('input', (event) => {
     query = event.target.value;
