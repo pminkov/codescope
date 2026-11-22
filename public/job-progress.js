@@ -4,14 +4,23 @@ function canDismissJob(job) {
     ['completed', 'failed', 'cancelled', 'interrupted'].includes(job.status));
 }
 
+// Keep finished progress visible for five minutes after execution ends.
+export function getJobDismissalDelay(job, now = Date.now()) {
+  if (!canDismissJob(job)) return null;
+  const finished = Date.parse(job.finishedAt || job.updatedAt);
+
+  return Number.isFinite(finished) ? Math.max(0, finished + 5 * 60 * 1000 - now) : null;
+}
+
 // Remember each project's dismissed job across reloads, with an in-memory fallback.
 export function createJobDismissals(storageHost = globalThis) {
   const dismissed = new Map();
 
   return {
-    // Keep running jobs and new job IDs visible regardless of earlier dismissals.
-    isDismissed(projectId, job) {
+    // Hide expired progress on reload while keeping active and recent jobs visible.
+    isDismissed(projectId, job, now = Date.now()) {
       if (!canDismissJob(job)) return false;
+      if (getJobDismissalDelay(job, now) === 0) return true;
       if (!dismissed.has(projectId)) {
         let jobId = null;
         try {

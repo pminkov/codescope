@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createJobDismissals, formatJobElapsed, formatJobMessageTime, getJobMessages } from '../public/job-progress.js';
+import {
+  createJobDismissals, formatJobElapsed, formatJobMessageTime, getJobMessages,
+  getJobDismissalDelay,
+} from '../public/job-progress.js';
 
 // Preserve manual closure without hiding new jobs, another project, or active work.
-test('finished progress stays visible until dismissed and closure survives reloads', () => {
+test('finished progress can be closed manually and closure survives reloads', () => {
   const values = new Map();
   const host = { localStorage: {
     // Read saved browser preferences shared by successive page instances.
@@ -35,6 +38,44 @@ test('finished progress stays visible until dismissed and closure survives reloa
   assert.equal(progress.isDismissed('project', { ...job, status: 'running' }), false);
   assert.equal(progress.dismiss('project', { id: 'index', kind: 'index', status: 'completed' }), false);
   assert.equal(progress.dismiss('project', null), false);
+});
+
+// Use execution time so reopening yesterday's analysis never revives its progress.
+test('finished progress expires five minutes after execution, including on reload', () => {
+  const finished = Date.parse('2026-11-19T12:00:00Z');
+  for (const status of ['completed', 'failed', 'cancelled', 'interrupted']) {
+    const job = {
+      id: status, kind: 'architecture', status,
+      finishedAt: new Date(finished).toISOString(),
+    };
+    const progress = createJobDismissals({});
+    assert.equal(getJobDismissalDelay(job, finished), 300000);
+    assert.equal(getJobDismissalDelay(job, finished + 299999), 1);
+    assert.equal(progress.isDismissed('project', job, finished + 299999), false);
+    assert.equal(getJobDismissalDelay(job, finished + 300000), 0);
+    assert.equal(progress.isDismissed('project', job, finished + 300000), true);
+    assert.equal(createJobDismissals({}).isDismissed(
+      'project', job, finished + 24 * 60 * 60 * 1000,
+    ), true);
+    assert.equal(job.status, status);
+  }
+});
+
+// Never expire active work or guess an end time when legacy timestamps are missing.
+test('progress expiration respects active jobs and legacy completion timestamps', () => {
+  const now = Date.parse('2026-11-20T12:00:00Z');
+  const job = {
+    id: 'legacy', kind: 'flow', status: 'completed', updatedAt: '2026-11-19T12:00:00Z',
+  };
+  assert.equal(getJobDismissalDelay(job, now), 0);
+  assert.equal(createJobDismissals({}).isDismissed('project', job, now), true);
+
+  for (const next of [null, { ...job, status: 'queued' }, { ...job, status: 'running' },
+    { ...job, kind: 'index' }, { ...job, updatedAt: undefined },
+    { ...job, updatedAt: 'invalid' }]) {
+    assert.equal(getJobDismissalDelay(next, now), null);
+    assert.equal(createJobDismissals({}).isDismissed('project', next, now), false);
+  }
 });
 
 // Browser storage failures should leave manual closure usable in the current page.

@@ -1,5 +1,8 @@
 import { escapeHtml as escape, formatText } from './content.js';
-import { createJobDismissals, formatJobElapsed, formatJobMessageTime, getJobMessages } from './job-progress.js';
+import {
+  createJobDismissals, formatJobElapsed, formatJobMessageTime, getJobMessages,
+  getJobDismissalDelay,
+} from './job-progress.js';
 import {
   renderSequenceDiagram, renderSequenceZoomControls, setupSequenceZoom,
 } from './sequence-diagram.js';
@@ -65,6 +68,7 @@ const sequenceZoomPreferences = new Map();
 let projects = [];
 let pollTimer;
 let jobElapsedTimer;
+let jobDismissalTimer;
 let jobPromptRequest = 0;
 let jobPromptFiles = [];
 let jobInputKind = 'prompt';
@@ -169,7 +173,7 @@ function currentRoute() {
 async function navigate(url, replace = false) {
   if (replace) history.replaceState(null, '', url);
   else if (url !== location.pathname) history.pushState(null, '', url);
-  await loadCurrent();
+  await loadCurrentProject();
 }
 
 // Apply the chosen theme and remember the browser preference.
@@ -1101,7 +1105,7 @@ async function deleteCurrentNode() {
     );
     if (data.id === projectId) {
       details.close();
-      await loadCurrent();
+      await loadCurrentProject();
     }
   } catch (error) {
     if (details.open && details.dataset.project === projectId && details.dataset.nodeId === node.id)
@@ -1323,9 +1327,10 @@ function openJobPrompts() {
   loadJobPrompts();
 }
 
-// Retain progress and its final elapsed time until the user closes a finished job.
+// Retain finished progress until it is closed manually or five minutes have passed.
 function renderJob() {
   clearInterval(jobElapsedTimer);
+  clearTimeout(jobDismissalTimer);
   const panel = selectElement('#job-panel');
   const job = data?.job;
   const promptDialog = selectElement('#job-prompts-dialog');
@@ -1366,6 +1371,8 @@ function renderJob() {
 
   updateJobElapsedTime();
   if (job.status === 'running') jobElapsedTimer = setInterval(updateJobElapsedTime, 1000);
+  const dismissalDelay = getJobDismissalDelay(job);
+  if (dismissalDelay !== null) jobDismissalTimer = setTimeout(renderJob, dismissalDelay);
 }
 
 // Update project metadata, action availability, and source freshness notices.
@@ -1424,7 +1431,7 @@ async function loadProjects() {
 }
 
 // Load the current project, reject stale responses, and poll active jobs.
-async function loadCurrent({ quiet = false } = {}) {
+async function loadCurrentProject({ quiet = false } = {}) {
   if (deletingProject) return;
   clearTimeout(pollTimer);
   const sequence = ++loadSequence;
@@ -1489,7 +1496,7 @@ async function loadCurrent({ quiet = false } = {}) {
     if (['queued', 'running'].includes(data.job?.status))
       pollTimer = setTimeout(
         // Poll an active job without rebuilding an unchanged view.
-        () => loadCurrent({ quiet: true }),
+        () => loadCurrentProject({ quiet: true }),
         2000,
       );
   } catch (error) {
@@ -1501,7 +1508,7 @@ async function loadCurrent({ quiet = false } = {}) {
     if (quiet)
       pollTimer = setTimeout(
         // Retry a failed background poll after a short delay.
-        () => loadCurrent({ quiet: true }),
+        () => loadCurrentProject({ quiet: true }),
         4000,
       );
   }
@@ -1621,7 +1628,7 @@ async function runAnalysisAction(action, kind, id) {
     if (['rerun', 'modify'].includes(action)) data.job = result;
     else if (location.pathname === pathname)
       history.replaceState(null, '', projectUrl(kind, action === 'duplicate' ? result.analysisId : ''));
-    await loadCurrent();
+    await loadCurrentProject();
   } catch (error) {
     showError(error.message);
   } finally {
@@ -1676,7 +1683,7 @@ async function runAction(action) {
       if (action === 'directories' && data?.id === projectId) data.job = result;
     }
 
-    await loadCurrent();
+    await loadCurrentProject();
   } catch (error) {
     showError(error.message);
   }
@@ -1716,7 +1723,7 @@ async function deleteCurrentProject(id) {
     selectElement('#delete-project-label').textContent = 'Delete';
     selectElement('#delete-project').disabled = !data;
     selectElement('#project-picker').disabled = !projects.length;
-    if (projects.length) await loadCurrent();
+    if (projects.length) await loadCurrentProject();
     else renderEmptyWorkspace();
   }
 }
@@ -1724,6 +1731,7 @@ async function deleteCurrentProject(id) {
 // Clear project-specific UI when the workspace has no registered projects.
 function renderEmptyWorkspace() {
   clearInterval(jobElapsedTimer);
+  clearTimeout(jobDismissalTimer);
   disposeSequenceZoom?.();
   disposeSequenceZoom = undefined;
   clearTimeout(pollTimer);
@@ -1799,7 +1807,7 @@ async function saveProjectName(event) {
       name: selectElement('#renamed-project-name').value.trim(),
     });
     dialog.close();
-    if (currentRoute().id === id) await loadCurrent();
+    if (currentRoute().id === id) await loadCurrentProject();
     else await loadProjects();
   } catch (error) {
     selectElement('#rename-project-error').textContent = error.message;
@@ -1906,7 +1914,7 @@ async function initializeApp() {
       selectElement('#project-name').textContent = project.name;
     }
 
-    await loadCurrent();
+    await loadCurrentProject();
   } catch (error) {
     showError(error.message);
   }
@@ -2018,7 +2026,7 @@ document.addEventListener('click', (event) => {
     button.disabled = true;
     button.textContent = 'Scanning…';
     // Always restore the control after a failed or successful source reload.
-    loadCurrent().finally(() => {
+    loadCurrentProject().finally(() => {
       button.disabled = false;
       button.textContent = 'Rescan';
     });
@@ -2325,7 +2333,7 @@ document.addEventListener('submit', async (event) => {
     form.drafts.delete(projectId);
     if (data?.id === projectId) {
       data.job = job;
-      await loadCurrent();
+      await loadCurrentProject();
     }
   } catch (error) {
     if (event.target.isConnected) {
@@ -2336,7 +2344,7 @@ document.addEventListener('submit', async (event) => {
 });
 // Restore the current project view after browser history navigation.
 window.addEventListener('popstate', () => {
-  loadCurrent();
+  loadCurrentProject();
 });
 // Focus directory search on the slash shortcut when no dialog or text input is active.
 document.addEventListener('keydown', (event) => {
