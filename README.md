@@ -1,104 +1,50 @@
 # CodeScope
 
-A local code-understanding tool for repositories and ordinary directories. The Node server indexes files and runs `codex exec` in background jobs to generate directory explanations, system diagrams, sequence diagrams, and requested code flows.
+Explore a codebase with directory explanations, architecture and sequence diagrams,
+code flows, and answers linked to source. Runs locally using the Codex CLI.
 
-## Project layout
+## Run
 
-- `src/`: Node server, indexing, analysis runner, storage, and supporting modules.
-- `public/`: browser UI and static assets.
-- `test/`: automated tests.
-
-## Run locally
-
-Requires Node.js 22+, the Codex CLI on PATH, and an existing Codex login (`codex login`).
+Requires Node.js 22+ and the Codex CLI on your PATH.
 
 ```sh
 git clone https://github.com/pminkov/codescope.git
 cd codescope
 npm ci
+codex login
 npm start
 ```
 
-Open [http://127.0.0.1:4310](http://127.0.0.1:4310). `PORT=4311 npm start` chooses another port. `npm run dev` restarts the server when imported source changes; reload the browser after frontend edits.
+Open [127.0.0.1:4310](http://127.0.0.1:4310), choose **Add project**, and select
+or paste a folder path.
 
-## Add and explore projects
+## Configuration
 
-Use **Add project**, click **Browse…** to select a folder in the native macOS folder picker (or paste an absolute path), optionally enter a name, then choose **Add and analyze**. Cancelling the folder picker preserves the current path. The picker opens on the Mac running the CodeScope server. The directory stays in place and does not need Git. CodeScope validates and canonicalizes the path, prevents duplicate registrations, saves the project in the picker, and queues its first analysis. Project names must be unique, ignoring case and surrounding spaces; this also applies when the name defaults to the folder name. The tree appears after indexing; directory explanations and architecture become available as their stages finish.
-
-- **Directories:** searchable tree, directory explanations, file inventories, and read-only source previews. Press `/` to focus search. Choose **Actions → Rerun** in the analysis heading to rescan the current source and regenerate explanations for every directory. This replaces the saved directory analysis and its source baseline; architecture diagrams, flows, Nouns results, and sequence diagrams keep their saved content and baselines. Previous explanations remain visible while the job runs. Cancel and Retry use the existing job controls, and a failed or cancelled rerun preserves the previous directory analysis.
-- **Code flows:** enter a feature or action and choose **Trace flow**. A separate Codex job traces real calls and request boundaries, with source citations and failure branches.
-- **Architecture:** keep the overall system diagram and add focused views by entering an architecture question and choosing **Generate diagram**. For example, ask how authentication fits together or which components own background jobs. Each answer is saved as a separate component graph with source references and explicit inferred connections. Select a diagram from the sidebar; its URL can be bookmarked and reloaded. Previous diagrams remain available while a new question is analyzed. Arrows use separate attachment points and route around cards with rounded corners. Nodes stay compact: click one to open its full description, tags, sources, and connections in an overlay dialog. Select a connected component in the dialog to switch to its details. **Delete node** asks for confirmation, then permanently removes that node and every incoming or outgoing connection from only the selected diagram’s saved JSON. The diagram stays in place while details or source previews are open. Hover or keyboard-focus a component, or a connection in the list, to highlight its relationships.
-- **Sequences:** describe an interaction and choose **Generate sequence**. Each request saves a separate sequence diagram with participant lifelines, numbered calls, dashed replies, asynchronous arrows, and labeled conditions. Select a participant or arrow to open a details modal with its explanation and source evidence. Use **Previous** and **Next** in a message modal to step through the sequence; a counter shows the current message and the buttons stop at either end. Closing the modal returns to the same diagram position and zoom. The full message list remains available under a collapsed disclosure. Participant descriptions, outcomes, and notes explain branch behavior and concurrency. Diagrams start fitted to the available width so all participants are visible. Use the zoom controls to enlarge or reduce the diagram, **100%** to restore its original size, or **Fit to width** to follow the available width as the window resizes. Each diagram remembers its zoom while you navigate within the current page session. Compact participant headers stay at the top of the diagram while you scroll or pan down, and stay aligned with their lifelines through horizontal movement and zoom. Wrapped names receive enough height to remain readable. Drag blank diagram space with the mouse to pan horizontally or vertically; participant and message links remain clickable. Scrollbars, wheel scrolling, and keyboard scrolling also remain available. Diagrams support both themes, and have bookmarkable URLs at `/projects/<id>/sequences/<analysis-id>`. Sequence analysis runs only when requested; previous diagrams remain available while another job runs. Missing implementations produce an explanation instead of an invented interaction.
-- **All:** the last tab combines directory analysis, architecture diagrams, code flows, Nouns analyses, and sequence diagrams for the selected project. Results are sorted by their last successful analysis time, newest first, and link to their detail views. Rerunning a result moves it up when analysis completes; duplicating it preserves its original analysis time. Results without a known analysis date appear last.
-- **Themes:** readable light and dark views with a browser-local preference.
-- **Ask:** the fixed button in the bottom-right corner opens a chat about the current view, including open details and source previews. Each question captures the selected result and visible text, then Codex inspects a fresh, filtered, read-only source snapshot. Function names and file/line references in answers are clickable. Their destinations are validated against the inspected source snapshot; clicking opens the current file from disk and highlights the referenced line or range. The chat stays open underneath the source preview and returns when the preview closes. Escape closes the most recently opened window first, including Ask, sequence details, source previews, and other dialogs. Opening order is retained as windows close, and returning from source previews preserves the chat’s reading position. Activity messages and an elapsed timer show progress; completed activity stays under a disclosure. Use Enter to send or Shift+Enter for a new line. Follow-up questions retain recent completed turns, and each project keeps its own conversation and draft for the current page session. **Stop** cancels the question; closing the panel lets it finish. Switching projects cancels an active question. **New chat** clears the current conversation. Questions run independently of analysis jobs, with at most one per project and two across the server. They do not change saved analyses or use analysis job history; temporary snapshots are removed when execution ends. Reloading clears the chat, and losing the connection cancels its worker.
-- **Code Scan:** a live outline of the current source, available without running a model analysis. Only directories with source files appear; HTML, styles, documentation, and configuration files are excluded. Select a directory to see every source file directly inside it, with named functions and classes. Class methods and nested functions stay under their owners. Each file shows its physical line count and nonblank line count (both include comments). Click a filename or symbol to preview its source at the declaration. **Rescan** reloads the current filesystem; directory selections have bookmarkable URLs at `/projects/<id>/code-scan/<directory>`. Syntax parsing supports JavaScript/JSX, TypeScript/TSX, Python, Swift, Go, Rust, Java, C/C++, C#, Ruby, Kotlin, PHP, shell, and Vue/Svelte script blocks. Other recognized source languages remain listed with line counts and an explicit unsupported-symbol notice. Unreadable or oversized files remain listed with unavailable counts. Code Scan uses the same ignore rules and 1 MB preview limit as the other views. It does not create a saved analysis or change analysis baselines.
-- **Nouns:** cards show just the concept name and description; use **Details** at the top right to open the full responsibilities and source evidence in a modal. Closing details returns to the same inventory position. Identify the project's main domain entities and concepts, their responsibilities, and their relationships, with source citations. Choose **Analyze nouns** with a blank scope for the whole project, or enter a folder, subsystem, or feature to focus on. Each run is saved separately and has a bookmarkable URL at `/projects/<id>/nouns/<analysis-id>`. Nouns runs only when requested; adding or reanalyzing a project does not start it automatically. Existing Nouns analyses keep their source versions when other analyses run.
-
-Each saved analysis has one **Actions** menu. **Rerun** re-indexes the current source, repeats the original request, and replaces only that result, preserving its URL. Failed or cancelled reruns leave the previous result intact. **Duplicate** creates an independent saved copy with the same request, content, and source baseline; it does not run the model or mark old results current. Directories remains a single analysis and cannot be duplicated. **Delete** asks for confirmation and removes only the selected saved result; source files and other analyses stay in place. These actions are unavailable while a project job is queued or running. After deleting directory explanations, **Actions → Rerun** generates them again.
-
-Choose **Actions → Modify** on an architecture diagram, code flow, Nouns analysis, or sequence diagram to describe a change in up to 4,000 characters. CodeScope gives the model the current saved result, the original request, previous successful modifications, and a fresh source snapshot. It replaces only that result after the updated output passes the usual schema and source validation, keeping its ID, URL, and creation date. The analysis date updates on success. The existing result stays available while the job runs, and failures or cancellation leave it intact. **Retry** repeats the same modification prompt, including after a server restart. Later **Rerun** jobs retain successful modification instructions. Cancelled prompt dialogs keep their unsent text during the current browser session. Directory explanations use **Rerun** instead of **Modify**.
-
-The **⋯** project actions menu beside the project title contains **Info**, **Rename**, and **Delete**. **Info** opens a modal with the project directory and stack tags; these details are kept out of the main header. **Rename** changes the display name shown in the project picker, header, and browser title. Names must be nonempty, at most 100 characters, and unique ignoring case and surrounding spaces. The root directory, project ID, URLs, and saved analyses stay unchanged. Renaming is available while analysis runs.
-
-**Delete** in the project Actions menu asks for confirmation, stops queued or running analysis, and removes the project from the picker along with its saved explanations, diagrams, flows, and debugging history. The source directory stays in place. Deletion cannot be undone; adding the directory again starts with fresh analysis. The next project opens automatically, or the empty workspace appears after deleting the last project. An empty saved workspace stays empty on restart.
-
-Projects have stable, readable IDs derived from their source directory names: `My App` becomes `my-app`, with duplicates named `my-app-01`, `my-app-02`, and so on. Names are normalized to lowercase ASCII letters, digits, and hyphens; a name with no usable characters becomes `project`. The ID is assigned once and stays unchanged when the display name or source path changes. Storage uses `.codescope/projects/<id>/`, and URLs use the same ID, for example `/projects/codescope/directories`, `/projects/codescope/flows/<flow-id>`, and `/projects/codescope/architecture/<diagram-id>`. Existing project folders and registry entries are migrated on startup; old UUID URLs are not retained. `/architecture` and `/architecture/overview` open the overall diagram when one exists. Direct visits, reloads, and Back/Forward work. Original `/directories`, `/flows`, `/architecture`, and hash links open under the selected project.
-
-New CodeScope data stores start with an empty project picker.
-
-## Analysis jobs
-
-A single worker runs queued jobs in order. Initial analysis indexes source, explains directories, then builds the overall architecture. Directory reruns, requested flows, sequence diagrams, Nouns analyses, and architecture questions are independent jobs; an architecture question runs only the architecture stage with the requested focus. Progress is persisted and polled by the browser. The status panel identifies the analysis type, including **Directories + architecture** for a new project’s initial analysis. While a job runs, its status panel shows elapsed execution time in minutes and seconds and the four latest distinct progress messages, oldest first. The elapsed timer sits beside the stage label. Each new message records its occurrence time and displays a local HH:MM:SS timestamp; older text-only history without recorded times shows --:--:--. New messages enter at the bottom and the oldest row is muted when four are available. The timer and message history survive page reloads; queued jobs show 00:00 until execution starts. Completed jobs stay visible with an **Analysis complete** label, their final elapsed time, and a **Close** button. Closing a finished job is remembered in this browser across navigation and reloads; a new job always displays fresh progress. Failed, cancelled, and interrupted jobs retain their final elapsed time and keep **Retry** alongside **Close**. Active or queued jobs can be cancelled; failed, cancelled, or interrupted jobs can be retried with the original question. Server restarts mark unfinished jobs interrupted rather than silently re-running them. Successful stages remain available if a later stage fails.
-
-The runner creates a filtered snapshot from indexed text files, then invokes the CLI with argument arrays (no shell):
-
-```text
-codex exec --cd <snapshot> --sandbox read-only --skip-git-repo-check
-  --ignore-user-config --ephemeral --json --output-schema <schema> -
-```
-
-The prompt arrives on stdin; JSONL events provide progress and a strict schema defines the final result. Saved CLI authentication is reused. The runner uses the CLI's default model, without loading user customization or project MCP configuration. The CLI runs locally; model analysis sends the filtered source to OpenAI. The parent server validates output shapes, file paths, line ranges, and graph references before saving results. This verifies the citations exist; it does not prove every generated explanation correct.
-
-Generated explanations keep source evidence in structured citation arrays. The UI shows clean prose and formatted inline code, with deduplicated file and line links under collapsed **Sources** controls. Legacy saved analyses with inline `[file:line]` markers are normalized when read, without rerunning analysis or discarding their evidence. Directory descriptions and metadata have explicit length limits.
-
-The target app is never started, installed, or tested by the analysis pipeline. Agent instruction files (`AGENTS.md`, `CLAUDE.md`) are listed in the tree but omitted from analysis snapshots. Snapshot files are read-only. Each Codex stage has a 10-minute timeout; cancellation terminates its process group.
-
-Each project's `last_jobs/` directory keeps the three most recent started jobs for debugging, including the current job. All working files are retained for those jobs: source snapshots, indexes, schemas, prompts, returned stage results, and job metadata. Failed, cancelled, and interrupted jobs retain their available files too. Starting another job removes older job directories in their entirety; saved diagrams and flows in `understanding.json` are unaffected. A README in `last_jobs/` explains this policy. Existing `jobs/` directories are migrated on startup, although previously deleted files cannot be recovered.
-
-Use **View prompt** in the analysis progress panel to inspect the exact saved input sent to Codex and its full local file path. Choose **Prompt** or **Output schema** to inspect either file for the selected stage; schemas are formatted as readable JSON and show their saved file path. The viewer reads the job's saved schema, including for older jobs, and reports when a schema file is unavailable. The viewer updates while analysis runs and includes a stage selector for jobs that generate multiple prompts. It remains available on completed or failed jobs until their progress panel is closed. Prompts and schemas follow the same three-job retention policy as the other debugging files.
-
-## Scanning, storage, and source comparison
-
-Indexing respects nested `.gitignore` and `.codescopeignore` rules. Hidden files, common secret/key files, dependencies, build outputs, and symlinks are excluded. Source previews have a 1 MB limit; binary files are listed without previews. Indexing is bounded at 20,000 files, 5,000 directories, and 50 levels. Large projects should select a subsystem or add ignore rules.
-
-An analysis snapshot contains at most 600 readable files and 8 MB, prioritizing READMEs, manifests, entrypoints/configuration, and source over tests and documentation. A scoped Nouns request prioritizes files and directories explicitly named in its scope before general context. Coverage is shown when some files are omitted. Missing explanations remain explicitly unanalyzed.
-
-CodeScope stores its registry, generated understanding, and job status under the gitignored `.codescope/` directory. It does not write into registered projects. Every project load and analysis navigation scans the current filesystem and computes hashes in memory. There is no persistent project `index.json` or Refresh index action. Job-local indexes remain in `last_jobs/` for debugging.
-
-Each result in `understanding.json` owns a `baseline` containing its analysis time (`analyzedAt`) and a map of project-relative filenames to SHA-256 hashes (`files`). The map covers every eligible file in the scan, including binary files, oversized files, instruction files, and files omitted by snapshot limits. Hashes for source copied into the analysis snapshot reflect that exact snapshot content. Directory results live together in `directoryAnalysis`; all architecture diagrams live in the ordered `architectures` array, code flows in `flows`, Nouns results in `nounAnalyses`, and sequence diagrams in `sequences`. The initial system overview is the first architecture entry, with the stable ID `overview`; focused diagrams follow it. There is no singular `architecture` field, separate `reviews` map, or shared file inventory.
-
-Adding a project generates directory explanations and the overall architecture. Failed, cancelled, or interrupted jobs can be retried from their status message. Focused architecture questions, code flows, Nouns analyses, and sequence diagrams run when requested and retain their own baselines. Diagram edits preserve the selected result's baseline and are blocked while analysis is active. Deleting all nodes leaves a saved empty diagram.
-
-Each completed analysis stage also generates four next requests from the inspected code and recent saved analysis questions. They are saved once at the top level of `understanding.json` as `nextPrompts`, with `architecture`, `nouns`, `flows`, and `sequences` string fields. The initial project analysis generates all four; subsequent successful analyses refresh them in the same model response. Failed or cancelled stages keep the existing suggestions. The analysis forms start with the generated request as editable text. Unsent drafts, including deliberately cleared fields, take priority. Projects without suggestions keep the existing example placeholders and are not backfilled when opened.
-
-Each analysis shows its own date and source freshness. Click **K files changed since this analysis** to see the complete filename list. Counts include modified, added, deleted, and unreadable files compared with that result's baseline. Each filename is labeled Added, Modified, Removed, or Could not read. Removed also includes files now excluded by project ignore rules. Added files appear automatically on the next project load or analysis navigation. Changed citations remain visible with a stale indicator and a current source preview. Opening a project does not regenerate explanations or update historical baselines.
-
-On startup, existing `understanding.json` files are migrated in place. Legacy directory fields are grouped into `directoryAnalysis`, and each old review becomes the corresponding result's baseline. A legacy singular `architecture` graph is moved to the front of `architectures` without changing its contents or baseline; existing focused diagram IDs and `/architecture/overview` links stay valid. Retained historical job indexes recover hashes omitted from old snapshots where available. Original reviewed hashes and dates are preserved; historical inventory entries whose hashes cannot be recovered are saved as `null` and shown as an incomplete comparison, never filled using today's code. The old project index is removed after the migrated understanding has been saved successfully.
-
-Optional environment settings:
-
-- `CODESCOPE_DATA_DIR`: alternate storage directory.
-- `CODESCOPE_CODEX_BIN`: absolute path to the CLI if `codex` is not on PATH.
-- `PORT`: local HTTP port (default `4310`).
-
-The server binds to `127.0.0.1`, rejects non-local Host headers and cross-origin requests, and requires JSON for mutation APIs. Source previews are restricted to files indexed within each project's canonical root.
-
-## Checks
+Set environment variables when starting the server:
 
 ```sh
-npm run check
-npm test
+CODESCOPE_DATA_DIR="/path/to/data" PORT=4311 npm start
 ```
 
-Tests use isolated temporary stores and a simulated CLI executable. They cover canonical registration, persistence, ignore rules, source restrictions, queue serialization, cancellation, timeout, interruption recovery, failed-stage retention, citation validation, direct routes, and HTTP origin boundaries. Real Codex analysis is a separate integration check, so the test suite does not spend model usage.
+- `CODESCOPE_DATA_DIR`: saved projects and analyses; defaults to `.codescope/`.
+- `CODESCOPE_CODEX_BIN`: path to Codex; defaults to `codex`.
+- `PORT`: local port; defaults to `4310`.
+
+Project paths are stored in `<data directory>/projects.json`. Source files stay
+in their original folders. Copy the existing data directory's contents to keep
+saved projects and analyses when changing its location.
+
+## Source and privacy
+
+Analysis sends filtered source to OpenAI through Codex. Scanning respects
+`.gitignore` and `.codescopeignore`, and excludes hidden files and common key files.
+CodeScope does not modify your source. Saved job history includes source snapshots
+and prompts; the default `.codescope/` directory is gitignored.
+
+## Development
+
+```sh
+npm run dev    # Restart on server changes
+npm run check  # Syntax checks
+npm test       # Tests use a simulated CLI; no model usage
+```
