@@ -169,9 +169,32 @@
         <div class="action-dialog-buttons"><button class="button" value="no" autofocus>No, keep node</button><button class="button danger" value="yes">Yes, delete node</button></div>
       </form>
     </dialog>
-    <dialog id="analysis-changes-dialog" aria-labelledby="analysis-changes-title" aria-describedby="analysis-changes-description">
-      <div class="source-heading"><div><span class="eyebrow" id="analysis-changes-name"></span><h2 id="analysis-changes-title"></h2></div><button type="button" id="close-analysis-changes" class="icon-button" aria-label="Close changed files" autofocus>×</button></div>
-      <div class="analysis-changes-body"><p id="analysis-changes-description">Files added, modified, removed, or unreadable since this analysis. Removed includes files now excluded by project ignore rules.</p><ul id="analysis-changes-list"></ul></div>
+    <dialog
+      id="analysis-changes-dialog"
+      aria-labelledby="analysis-changes-title"
+      aria-describedby="analysis-changes-date analysis-changes-description"
+    >
+      <div class="source-heading">
+        <div>
+          <span class="eyebrow" id="analysis-changes-name"></span>
+          <h2 id="analysis-changes-title"></h2>
+          <time id="analysis-changes-date" hidden></time>
+        </div>
+        <button
+          type="button"
+          id="close-analysis-changes"
+          class="icon-button"
+          aria-label="Close changed files"
+          autofocus
+        >×</button>
+      </div>
+      <div class="analysis-changes-body">
+        <p id="analysis-changes-description">
+          Files added, modified, removed, or unreadable since this analysis. Removed
+          includes files now excluded by project ignore rules.
+        </p>
+        <ul id="analysis-changes-list"></ul>
+      </div>
     </dialog>
     <dialog id="source-dialog" aria-labelledby="source-title"><div class="source-heading"><div><span class="eyebrow">SOURCE PREVIEW</span><h2 id="source-title"></h2></div><button id="close-source" class="icon-button" aria-label="Close source preview">×</button></div><p id="source-context" class="source-context"></p><div id="source-body"></div></dialog>
   </body>

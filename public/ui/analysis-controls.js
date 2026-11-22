@@ -1,49 +1,53 @@
 import { escapeHtml as escape } from '../content.js';
 import { renderIcon } from './icons.js';
 
-// Show the selected analysis's date and an expandable count of changed files.
+// Keep unavailable and incomplete comparisons visible when the header shows a compact count.
 export function renderAnalysisFreshness(review) {
   if (!review?.available)
     return /* HTML */ `
       <p class="analysis-freshness">Source comparison unavailable for this analysis.</p>
     `;
-  const count = new Set([...review.changedFiles, ...review.newFiles]).size;
-  const analyzedAt = formatAnalysisDate(review.reviewedAt);
-  const date = review.reviewedAt
+  return review.unknownFiles?.length
     ? /* HTML */ `
-        <time datetime="${escape(review.reviewedAt)}">Analyzed ${escape(analyzedAt)}</time>
+        <div class="analysis-freshness">
+          <span class="analysis-incomplete">
+            Comparison incomplete: some file hashes are unavailable.
+          </span>
+        </div>
       `
     : '';
-  const incomplete = review.unknownFiles?.length
-    ? /* HTML */ `
-        <span class="analysis-incomplete">
-          Comparison incomplete: some file hashes are unavailable.
-        </span>
-      `
-    : '';
+}
+
+// Place the source comparison count immediately after the selected analysis's Actions menu.
+export function renderAnalysisControls(kind, id, { review, ...options }) {
+  let changes = '';
+  if (review?.available) {
+    const count = new Set([...review.changedFiles, ...review.newFiles]).size;
+    const label = `${count} ${count === 1 ? 'file' : 'files'} changed since this analysis`;
+    const description = review.unknownFiles?.length
+      ? `${label}. Comparison incomplete: some file hashes are unavailable.`
+      : label;
+
+    changes = /* HTML */ `
+      <button
+        type="button"
+        class="analysis-changes ${!count && !review.unknownFiles?.length ? 'is-current' : ''}"
+        data-analysis-changes
+        aria-haspopup="dialog"
+        aria-controls="analysis-changes-dialog"
+        aria-label="${escape(description)}"
+        title="${escape(description)}"
+      >
+        ${renderIcon('clock')}
+        <span>${count}</span>
+      </button>
+    `;
+  }
 
   return /* HTML */ `
-    <div class="analysis-freshness">
-      ${date}${
-        count
-          ? /* HTML */ `
-              <button
-                type="button"
-                class="analysis-changes"
-                data-analysis-changes
-                aria-haspopup="dialog"
-              >
-                ${renderIcon('clock')}
-                <span>${count} ${count === 1 ? 'file' : 'files'} changed since this analysis</span>
-                ${renderIcon('chevron')}
-              </button>
-            `
-          : incomplete
-            ? ''
-            : /* HTML */ `
-                <span class="analysis-current">No files changed since this analysis</span>
-              `
-      }${incomplete}
+    <div class="analysis-header-controls">
+      ${renderAnalysisMenu(kind, id, options)}
+      ${changes}
     </div>
   `;
 }
@@ -160,7 +164,7 @@ export function renderAnalysisChanges(paths, review) {
     .join('');
 }
 
-// Format analysis dates consistently in freshness notices and the saved result list.
+// Format analysis dates consistently in comparison details and the saved result list.
 export function formatAnalysisDate(timestamp) {
   return timestamp
     ? new Date(timestamp).toLocaleString(undefined, {

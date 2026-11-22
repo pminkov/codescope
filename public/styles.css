@@ -458,8 +458,15 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 @media (max-width: 800px) { .architecture-content { margin-top: 20px; } .system-canvas { padding: 22px 52px 22px 14px; } .system-node { padding: 18px; } .system-schedule { margin: 20px -18px -18px; padding: 16px 18px; } .system-node-heading { align-items: flex-start; gap: 10px; } .system-node-heading h3 { font-size: 1.25rem; } .system-node-icon { width: 35px; height: 35px; } .system-node-heading .eyebrow { font-size: 0.75rem; } .system-figure figcaption { padding: 16px; } .diagram-caption { padding: 16px; } .authorization-label { right: 1px; } .tabs { overflow-x: auto; gap: 23px; } }
 
 /* Project management and background analysis. */
-/* Keep analysis metadata in its own row below the introduction. */
-.analysis-freshness { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; margin: 28px 0; padding-top: 17px; border-top: 1px solid var(--soft-border); font-size: .875rem; color: var(--muted); }
+/* Keep comparison warnings in the content and the compact count beside Actions. */
+.analysis-header-controls {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  font-size: .875rem;
+}
+.analysis-freshness { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px 24px; margin: 28px 0; padding-top: 17px; border-top: 1px solid var(--soft-border); font-size: .875rem; color: var(--muted); }
 .analysis-freshness + .directory-summary { margin-top: 0; }
 .directory-analysis-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; margin: 28px 0; padding-top: 17px; border-top: 1px solid var(--soft-border); }
 .directory-analysis-controls > div { flex: 1 1 300px; min-width: 0; }
@@ -467,14 +474,36 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 .directory-analysis-controls p { margin: 8px 0 0; color: var(--faint); font-size: .875rem; }
 .directory-analysis-controls > .button { font-size: .875rem; }
 .directory-analysis-controls + .directory-summary { margin-top: 0; }
-.analysis-changes, .analysis-current { display: inline-flex; align-items: center; gap: 7px; }
-.analysis-changes { max-width: 100%; padding: 7px 10px; text-align: left; color: var(--amber); background: var(--amber-bg); border: 1px solid var(--border); border-radius: 6px; }
+.analysis-changes {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  color: var(--amber);
+  background: var(--amber-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .analysis-changes:hover { border-color: var(--amber); }
-.analysis-changes .icon, .analysis-current .icon { width: 15px; height: 15px; }
-.analysis-current { padding: 5px 10px; border: 1px solid var(--green-line); border-radius: 5px; color: var(--green); background: var(--green-bg); font-weight: 500; }
+.analysis-changes .icon { width: 16px; height: 16px; }
+.analysis-changes.is-current {
+  color: var(--green);
+  background: var(--green-bg);
+  border-color: var(--green-line);
+}
+.analysis-changes.is-current:hover { border-color: var(--green); }
 #analysis-changes-dialog { width: min(720px, calc(100vw - 30px)); height: fit-content; max-height: calc(100dvh - 48px); overflow: hidden; }
 #analysis-changes-dialog .source-heading { flex-shrink: 0; align-items: flex-start; }
 #analysis-changes-title { font: 1.35rem/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+#analysis-changes-date {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: .875rem;
+}
+#analysis-changes-date[hidden] { display: none; }
 .analysis-changes-body { min-height: 0; overflow-y: auto; padding: 0 25px 25px; }
 .analysis-changes-body p { margin: 0 0 20px; color: var(--muted); }
 #analysis-changes-list { list-style: none; padding: 0; margin: 0; }

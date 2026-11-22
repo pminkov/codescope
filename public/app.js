@@ -1,5 +1,5 @@
 import { renderIcon } from './ui/icons.js';
-import { renderAnalysisChanges } from './ui/analysis-controls.js';
+import { renderAnalysisChanges, formatAnalysisDate } from './ui/analysis-controls.js';
 import { renderSourcePreview } from './ui/source-preview.js';
 import { renderEmptyProjectWorkspace, renderProjectLoadError } from './views/workspace.js';
 import {
@@ -231,13 +231,18 @@ function getSelectedAnalysisReview() {
   return { title: 'Directory analysis', review: data.directoryReview };
 }
 
-// Open the full filename list for the selected analysis without changing its results.
+// Show the selected analysis's timestamp and full source comparison without changing results.
 function openAnalysisChanges() {
   const analysis = getSelectedAnalysisReview();
   const review = analysis?.review;
   if (!review?.available) return;
   const paths = [...new Set([...review.changedFiles, ...review.newFiles])].sort();
   const dialog = selectElement('#analysis-changes-dialog');
+  const date = selectElement('#analysis-changes-date');
+  date.hidden = !review.reviewedAt;
+  date.dateTime = review.reviewedAt || '';
+  date.textContent = review.reviewedAt ? `Analyzed ${formatAnalysisDate(review.reviewedAt)}` : '';
+
   selectElement('#analysis-changes-name').textContent = analysis.title;
   selectElement('#analysis-changes-title').textContent =
     `${paths.length} ${paths.length === 1 ? 'file' : 'files'} changed since this analysis`;

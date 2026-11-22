@@ -2,7 +2,7 @@ import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
 import {
-  renderAnalysisMenu,
+  renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
@@ -169,7 +169,10 @@ export function renderArchitectureView(project, graph, { draft, projectUrl, acti
             <p class="lead">${formatText(graph.description)}</p>
             ${renderSourceDisclosure(graph.sources)}
           </div>
-          ${renderAnalysisMenu('architecture', graph.id, { busy: actionsBusy })}
+          ${renderAnalysisControls('architecture', graph.id, {
+            busy: actionsBusy,
+            review: graph.review,
+          })}
         </div>
         ${renderAnalysisFreshness(graph.review)}
         ${

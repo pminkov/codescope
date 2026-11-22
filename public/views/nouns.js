@@ -2,7 +2,7 @@ import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
 import {
-  renderAnalysisMenu,
+  renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
@@ -183,7 +183,10 @@ function renderNounsContent(project, selected, { busy, actionsBusy }) {
             <p class="lead">${formatText(selected.description)}</p>
             ${renderSourceDisclosure(selected.sources)}
           </div>
-          ${renderAnalysisMenu('nouns', selected.id, { busy: actionsBusy })}
+          ${renderAnalysisControls('nouns', selected.id, {
+            busy: actionsBusy,
+            review: selected.review,
+          })}
         </div>
         ${renderAnalysisFreshness(selected.review)}
         <div class="nouns-scope">

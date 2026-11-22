@@ -1,7 +1,7 @@
 import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceButton, renderSourceDisclosure } from '../ui/source-links.js';
-import { renderAnalysisMenu, renderAnalysisFreshness } from '../ui/analysis-controls.js';
+import { renderAnalysisControls, renderAnalysisFreshness } from '../ui/analysis-controls.js';
 
 // Match a directory or any descendant against the search query.
 function treeMatches(node, query) {
@@ -131,10 +131,13 @@ function renderFileRow(file) {
 
 // Explain the directory analysis status and how to refresh it.
 function renderDirectoryAnalysisControls(project) {
+  const freshness = renderAnalysisFreshness(project.directoryReview);
+  if (project.hasDirectoryAnalysis && !freshness) return '';
+
   return /* HTML */ `
     <div class="directory-analysis-controls">
       <div>
-        ${renderAnalysisFreshness(project.directoryReview)}${
+        ${freshness}${
           project.hasDirectoryAnalysis
             ? ''
             : /* HTML */ `
@@ -177,9 +180,10 @@ function renderDirectoryContent(project, node, { projectUrl, directoryUrl, actio
         <h2>${escape(node.title)}</h2>
         <p class="lead">${formatText(node.description)}</p>
       </div>
-      ${renderAnalysisMenu('directories', 'directories', {
+      ${renderAnalysisControls('directories', 'directories', {
         busy: actionsBusy,
         hasDirectoryAnalysis: project.hasDirectoryAnalysis,
+        review: project.directoryReview,
       })}
     </div>
     ${renderDirectoryAnalysisControls(project)}
