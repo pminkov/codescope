@@ -19,6 +19,18 @@ const assets = {
   '/code-scan.js': ['code-scan.js', 'text/javascript'],
   '/ask.js': ['ask.js', 'text/javascript'],
   '/dialog-stack.js': ['dialog-stack.js', 'text/javascript'],
+  '/ui/icons.js': ['ui/icons.js', 'text/javascript'],
+  '/ui/source-links.js': ['ui/source-links.js', 'text/javascript'],
+  '/ui/source-preview.js': ['ui/source-preview.js', 'text/javascript'],
+  '/ui/analysis-controls.js': ['ui/analysis-controls.js', 'text/javascript'],
+  '/views/directories.js': ['views/directories.js', 'text/javascript'],
+  '/views/flows.js': ['views/flows.js', 'text/javascript'],
+  '/views/architecture.js': ['views/architecture.js', 'text/javascript'],
+  '/views/nouns.js': ['views/nouns.js', 'text/javascript'],
+  '/views/sequences.js': ['views/sequences.js', 'text/javascript'],
+  '/views/all-analyses.js': ['views/all-analyses.js', 'text/javascript'],
+  '/views/job-progress.js': ['views/job-progress.js', 'text/javascript'],
+  '/views/workspace.js': ['views/workspace.js', 'text/javascript'],
   '/styles.css': ['styles.css', 'text/css'],
 };
 const pageRoute = /^\/(?:projects\/[a-zA-Z0-9_-]+\/)?(?:flows|directories|architecture|nouns|sequences|code-scan|all)(?:\/|$)/;

@@ -2814,6 +2814,18 @@ test('HTTP project APIs, direct routes, method rules, and origin boundaries work
   assert.equal(scanAsset.status, 200);
   assert.match(scanAsset.headers.get('content-type'), /text\/javascript/);
   assert.match(await scanAsset.text(), /export function renderCodeScan/);
+
+  // Traverse browser imports so extracted modules cannot silently return missing assets.
+  const moduleUrls = new Set(['/app.js']);
+  for (const path of moduleUrls) {
+    const response = await fetch(`${base}${path}`);
+    assert.equal(response.status, 200, path);
+    assert.match(response.headers.get('content-type'), /text\/javascript/, path);
+    const source = await response.text();
+    for (const [, specifier] of source.matchAll(/from\s+['"](\.[^'"]+)['"]/g))
+      moduleUrls.add(new URL(specifier, `${base}${path}`).pathname);
+  }
+
   assert.equal(
     (await post('/api/choose-directory', {}, { Origin: 'https://untrusted.example' })).status,
     403,

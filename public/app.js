@@ -1,11 +1,26 @@
-import { escapeHtml as escape, formatText } from './content.js';
+import { renderIcon } from './ui/icons.js';
+import { renderAnalysisChanges } from './ui/analysis-controls.js';
+import { renderSourcePreview } from './ui/source-preview.js';
+import { renderEmptyProjectWorkspace, renderProjectLoadError } from './views/workspace.js';
 import {
-  createJobDismissals, formatJobElapsed, formatJobMessageTime, getJobMessages,
+  renderDirectoriesView,
+  renderDirectoryTree,
+  renderDirectorySearchResults,
+} from './views/directories.js';
+import { renderFlowsView } from './views/flows.js';
+import { renderNounsView, renderNounDetails } from './views/nouns.js';
+import { renderSequencesView, renderSequenceDetails } from './views/sequences.js';
+import { renderArchitectureView, renderNodeDetails } from './views/architecture.js';
+import { renderAllAnalysesView } from './views/all-analyses.js';
+import { renderJobProgress } from './views/job-progress.js';
+import { escapeHtml as escape } from './content.js';
+import {
+  createJobDismissals,
+  formatJobElapsed,
+  getJobMessages,
   getJobDismissalDelay,
 } from './job-progress.js';
-import {
-  renderSequenceDiagram, renderSequenceZoomControls, setupSequenceZoom,
-} from './sequence-diagram.js';
+import { setupSequenceZoom } from './sequence-diagram.js';
 import { routeGraphEdges } from './graph-routing.js';
 import { getAnalysisEntries } from './analysis-list.js';
 import { renderCodeScan } from './code-scan.js';
@@ -14,43 +29,6 @@ import { setupDialogStack } from './dialog-stack.js';
 
 // Select a single UI element by its CSS selector.
 const selectElement = (selector) => document.querySelector(selector);
-
-const icons = {
-  folder:
-    '<path d="M3 7V5a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/>',
-  flow: '<path d="M9 5h8.5a3.5 3.5 0 0 1 0 7h-11a3.5 3.5 0 0 0 0 7H15"/><circle cx="18" cy="19" r="3"/><circle cx="6" cy="5" r="3"/>',
-  sequences: '<path d="m16 3 4 4-4 4M20 7H4m4 14-4-4 4-4M4 17h16"/>',
-  nouns: '<rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="13" width="7" height="7" rx="1.5"/><path d="M6 11v6h8M10 7h7v6"/>',
-  code: '<path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-13-2 20"/>',
-  scan: '<path d="M4 7V4h3m10 0h3v3m0 10v3h-3M7 20H4v-3M7 8h10M7 12h10M7 16h6"/>',
-  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
-  arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
-  chevron: '<path d="m9 5 7 7-7 7"/>',
-  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',
-  moon: '<path d="M21 13A9 9 0 0 1 11 3a9 9 0 1 0 10 10Z"/>',
-  file: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8Zm0 0v5h5M8 13h8m-8 4h5"/>',
-  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-11v1"/>',
-  check: '<path d="m5 12 4 4L19 6"/>',
-  architecture:
-    '<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/>',
-  browser: '<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 8h20M5 5.5h1m2 0h1"/>',
-  database:
-    '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>',
-  external:
-    '<path d="M14 3h7v7m0-7L10 14M10 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-5"/>',
-  rename: '<path d="m16 3 5 5-12 12H4v-5ZM14 5l5 5"/>',
-  rerun: '<path d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5"/>',
-  duplicate: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
-  delete: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
-  down: '<path d="m6 9 6 6 6-6"/>',
-  more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
-  all: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-};
-
-// Render an accessible decorative SVG from the shared icon set.
-const renderIcon = (name, extra = '') =>
-  `<svg class="icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.file}</svg>`;
 
 // Populate static icon placeholders when the page loads.
 document.querySelectorAll('[data-icon]').forEach((element) => {
@@ -84,7 +62,15 @@ const architectureDrafts = new Map();
 const nounsDrafts = new Map();
 const sequenceDrafts = new Map();
 const modificationDrafts = new Map();
-const projectTabs = ['directories', 'code-scan', 'architecture', 'flows', 'nouns', 'sequences', 'all'];
+const projectTabs = [
+  'directories',
+  'code-scan',
+  'architecture',
+  'flows',
+  'nouns',
+  'sequences',
+  'all',
+];
 const analysisForms = {
   'flow-form': { action: 'flows', field: 'feature', drafts: flowDrafts },
   'architecture-form': { action: 'architecture', field: 'question', drafts: architectureDrafts },
@@ -109,27 +95,47 @@ function currentAskContext() {
   if (tab === 'architecture') selected = getSelectedArchitecture();
   else if (tab === 'nouns') selected = getSelectedNounsAnalysis();
   else if (tab === 'sequences') selected = getSelectedSequence();
-  else if (tab === 'flows') selected = data.flows.find(
-    // Use the same first-flow fallback as the visible content.
-    (flow) => flow.id === selection,
-  ) || data.flows[0];
-  if (tab === 'directories') selected = flattenTree(data.tree).find(
-    // A missing directory is displayed as the project root by the directory view.
-    (entry) => entry.type === 'directory' && entry.path === selection,
-  ) || data.tree;
-  if (tab === 'code-scan') selected = data.codeScan?.directories.find(
-    // Code Scan defaults to its first directory containing source files.
-    (directory) => directory.path === selection,
-  ) || data.codeScan?.directories[0];
-  const labels = { directories: 'Directories', 'code-scan': 'Code Scan',
-    architecture: 'Architecture', flows: 'Code flows', nouns: 'Nouns',
-    sequences: 'Sequences', all: 'All analyses' };
+  else if (tab === 'flows')
+    selected =
+      data.flows.find(
+        // Use the same first-flow fallback as the visible content.
+        (flow) => flow.id === selection,
+      ) || data.flows[0];
+  if (tab === 'directories')
+    selected =
+      flattenTree(data.tree).find(
+        // A missing directory is displayed as the project root by the directory view.
+        (entry) => entry.type === 'directory' && entry.path === selection,
+      ) || data.tree;
+  if (tab === 'code-scan')
+    selected =
+      data.codeScan?.directories.find(
+        // Code Scan defaults to its first directory containing source files.
+        (directory) => directory.path === selection,
+      ) || data.codeScan?.directories[0];
+  const labels = {
+    directories: 'Directories',
+    'code-scan': 'Code Scan',
+    architecture: 'Architecture',
+    flows: 'Code flows',
+    nouns: 'Nouns',
+    sequences: 'Sequences',
+    all: 'All analyses',
+  };
   const detailDialog = dialogStack.latestDialog();
   const detail = detailDialog?.querySelector('h2')?.textContent;
   const title = selected?.title || selected?.path || labels[tab];
 
-  return { projectId: data.id, view: tab, selection: selected?.id ?? selected?.path ?? '',
-    label: `${data.name} · ${labels[tab]}${title !== labels[tab] ? ` · ${title}` : ''}${detail ? ` · ${detail}` : ''}`.slice(0, 500) };
+  const contextLabel = `${data.name} · ${labels[tab]}`;
+  const selectionLabel = title !== labels[tab] ? ` · ${title}` : '';
+  const detailLabel = detail ? ` · ${detail}` : '';
+
+  return {
+    projectId: data.id,
+    view: tab,
+    selection: selected?.id ?? selected?.path ?? '',
+    label: `${contextLabel}${selectionLabel}${detailLabel}`.slice(0, 500),
+  };
 }
 
 const ask = setupAsk(currentAskContext, openSource, dialogStack);
@@ -141,7 +147,9 @@ function flattenTree(node) {
 
 // Build a project route with safely encoded selection segments.
 function projectUrl(tab, selection = '', id = data?.id) {
-  return `/projects/${id}/${tab}${selection ? `/${selection.split('/').map(encodeURIComponent).join('/')}` : ''}`;
+  const path = selection.split('/').map(encodeURIComponent).join('/');
+
+  return `/projects/${id}/${tab}${selection ? `/${path}` : ''}`;
 }
 
 // Build the directory view URL for a source path.
@@ -204,130 +212,20 @@ selectElement('#theme-toggle').addEventListener('click', () =>
   setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'),
 );
 
-// Match a directory or any descendant against the search query.
-function treeMatches(node) {
-  return (
-    `${node.name} ${node.title} ${node.description} ${node.path}`
-      .toLowerCase()
-      .includes(query.toLowerCase()) ||
-    node.children?.some(
-      // Keep parent directories visible when a nested directory matches.
-      (child) => child.type === 'directory' && treeMatches(child),
-    )
-  );
-}
-
-// Render a directory tree row and its expanded children.
-function renderTree(node, selected, depth = 0) {
-  if (!treeMatches(node)) return '';
-  const children = node.children.filter(
-    // Select only directory children for tree navigation.
-    (child) => child.type === 'directory',
-  );
-  const isOpen = expanded.has(node.path) || Boolean(query);
-  const label = node.path ? node.name : data.name;
-
-  return `<li class="tree-item level-${Math.min(depth, 3)}"><div class="tree-row ${selected === node.path ? 'selected' : ''}">
-    ${children.length ? `<button class="tree-toggle ${isOpen ? 'open' : ''}" data-expand="${escape(node.path)}" aria-expanded="${isOpen}" aria-label="${isOpen ? 'Collapse' : 'Expand'} ${escape(label)}">${renderIcon('chevron')}</button>` : '<span class="tree-spacer"></span>'}
-    <a href="${directoryUrl(node.path)}" ${selected === node.path ? 'aria-current="page"' : ''}>${renderIcon('folder')}<span>${escape(label)}${node.path ? '<span class="slash">/</span>' : ''}</span><small>${node.fileCount}</small></a></div>
-    ${
-      isOpen && children.length
-        ? `<ul>${children
-            .map(
-              // Render each visible child with its selection and nesting depth.
-              (child) => renderTree(child, selected, depth + 1),
-            )
-            .join('')}</ul>`
-        : ''
-    }</li>`;
-}
-
-// Render a source preview link or an unresolved reference label.
-function renderSourceButton(reference, label, className = '') {
-  if (!reference) return '';
-  if (Object.hasOwn(reference, 'line') && !reference.line)
-    return `<span class="source-unavailable" title="This reference could not be resolved in the current source">${escape(label || reference.path)} · unresolved</span>`;
-
-  return `<button class="source-link ${reference.stale ? 'stale-source' : ''} ${className}" data-source="${escape(reference.path)}" data-line="${reference.line || 1}" data-symbol="${escape(reference.symbol || '')}" title="${reference.stale ? 'Source changed since analysis; preview shows current code' : 'Open source preview'}">${renderIcon('code')}<span>${escape(label || `${reference.path}:${reference.line || 1}`)}</span>${renderIcon('arrow')}</button>`;
-}
-
-// Group deduplicated source citations into a collapsible disclosure.
-function renderSourceDisclosure(sources = [], exclude = []) {
-  const groups = new Map();
-
-  for (const source of sources) {
-    if (
-      exclude.some(
-        // Omit references that already have a visible source button.
-        (reference) => reference.path === source.path && reference.line === source.line,
-      )
-    )
-      continue;
-    if (!groups.has(source.path)) groups.set(source.path, []);
-    const group = groups.get(source.path);
-    if (
-      !group.some(
-        // Detect a line range already present in the file group.
-        (entry) => entry.line === source.line && entry.endLine === source.endLine,
-      )
-    )
-      group.push(source);
-  }
-
-  if (!groups.size) return '';
-
-  return `<details class="source-disclosure"><summary>${renderIcon('chevron')}Sources <span>${groups.size} ${groups.size === 1 ? 'file' : 'files'}</span></summary><ul>${[
-    ...groups,
-  ]
-    .map(
-      // Render each file's grouped source references.
-      ([path, references]) => renderSourceGroup(path, references),
-    )
-    .join('')}</ul></details>`;
-}
-
-// Render the source line controls belonging to one file.
-function renderSourceGroup(path, references) {
-  return `<li><span class="source-file-name">${escape(path)}</span><div class="source-line-links">${references
-    .map(
-      // Render a resolved line link or an unavailable reference marker.
-      (reference) =>
-        reference.line
-          ? `<button type="button" class="line-reference ${reference.stale ? 'stale-source' : ''}" data-source="${escape(path)}" data-line="${reference.line}" aria-label="Open ${escape(path)} at line ${reference.line}" title="${reference.stale ? 'Source changed since analysis; opens current code' : 'View source'}">L${reference.line}${reference.endLine ? `–${reference.endLine}` : ''}</button>`
-          : '<span class="source-unavailable">Unavailable</span>',
-    )
-    .join('')}</div></li>`;
-}
-
-// Show the selected analysis's date and an expandable count of changed files.
-function renderAnalysisFreshness(review) {
-  if (!review?.available)
-    return '<p class="analysis-freshness">Source comparison unavailable for this analysis.</p>';
-  const count = new Set([...review.changedFiles, ...review.newFiles]).size;
-  const date = review.reviewedAt
-    ? `<time datetime="${escape(review.reviewedAt)}">Analyzed ${escape(new Date(review.reviewedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))}</time>`
-    : '';
-  const incomplete = review.unknownFiles?.length
-    ? '<span class="analysis-incomplete">Comparison incomplete: some file hashes are unavailable.</span>'
-    : '';
-
-  return `<div class="analysis-freshness">${date}${count
-    ? `<button type="button" class="analysis-changes" data-analysis-changes aria-haspopup="dialog">${renderIcon('clock')}<span>${count} ${count === 1 ? 'file' : 'files'} changed since this analysis</span>${renderIcon('chevron')}</button>`
-    : incomplete ? ''
-      : '<span class="analysis-current">No files changed since this analysis</span>'}${incomplete}</div>`;
-}
-
 // Find the source comparison belonging to the analysis currently on screen.
 function getSelectedAnalysisReview() {
   const { tab, selection } = currentRoute();
   if (tab === 'architecture') return getSelectedArchitecture();
   if (['flows', 'nouns', 'sequences'].includes(tab)) {
-    const analyses = (tab === 'flows' ? data.flows
-      : tab === 'sequences' ? data.sequences : data.nounAnalyses) || [];
-    return analyses.find(
-      // Match the same saved result used by the content view.
-      (analysis) => analysis.id === selection,
-    ) || analyses[0];
+    const analyses =
+      (tab === 'flows' ? data.flows : tab === 'sequences' ? data.sequences : data.nounAnalyses) ||
+      [];
+    return (
+      analyses.find(
+        // Match the same saved result used by the content view.
+        (analysis) => analysis.id === selection,
+      ) || analyses[0]
+    );
   }
 
   return { title: 'Directory analysis', review: data.directoryReview };
@@ -338,223 +236,64 @@ function openAnalysisChanges() {
   const analysis = getSelectedAnalysisReview();
   const review = analysis?.review;
   if (!review?.available) return;
-  const changeTypes = {
-    added: 'Added',
-    modified: 'Modified',
-    removed: 'Removed',
-    unreadable: 'Could not read',
-    changed: 'Changed',
-  };
   const paths = [...new Set([...review.changedFiles, ...review.newFiles])].sort();
   const dialog = selectElement('#analysis-changes-dialog');
   selectElement('#analysis-changes-name').textContent = analysis.title;
   selectElement('#analysis-changes-title').textContent =
     `${paths.length} ${paths.length === 1 ? 'file' : 'files'} changed since this analysis`;
-  selectElement('#analysis-changes-list').innerHTML = paths.map(
-    // Keep badge styles limited to the known comparison reasons.
-    (path) => {
-      const reason = review.fileChanges?.[path];
-      const status = Object.hasOwn(changeTypes, reason) ? reason : 'changed';
-      const label = changeTypes[status];
-
-      return `<li><code>${escape(path)}</code><span class="file-change-badge" data-change="${status}">${label}</span></li>`;
-    },
-  ).join('');
+  selectElement('#analysis-changes-list').innerHTML = renderAnalysisChanges(paths, review);
   dialog.dataset.route = location.pathname;
   if (!dialog.open) dialog.showModal();
 }
 
-// Render a subdirectory card with its description and file count.
-function renderDirectoryCard(child) {
-  return `<a class="folder-card" href="${directoryUrl(child.path)}"><div class="folder-card-top">${renderIcon('folder')}<strong>${escape(child.name)}<span class="slash">/</span></strong><span class="kind">${escape(child.kind)}</span>${renderIcon('arrow')}</div><p>${formatText(child.description)}</p><span class="file-count">${child.fileCount} ${child.fileCount === 1 ? 'file' : 'files'}</span></a>`;
-}
-
-// Render an indexed file row with evidence and source preview controls.
-function renderFileRow(file) {
-  return `<div class="file-row"><span class="file-icon">${renderIcon('file')}</span><div><strong>${file.readable ? `<button class="file-button" data-source="${escape(file.path)}">${escape(file.name)}</button>` : escape(file.name)}</strong><p>${formatText(file.description)}</p>${renderSourceDisclosure(file.sources)}</div><span class="file-type">${escape(file.name.split('.').at(-1))}</span>${file.readable ? `<button class="icon-button file-open" data-source="${escape(file.path)}" aria-label="Preview ${escape(file.name)}">${renderIcon('arrow')}</button>` : '<span class="binary-label">No preview</span>'}</div>`;
-}
-
-// Render a saved flow's navigation entry and selection state.
-function renderFlowOption(flow, index, selected) {
-  return `<a class="flow-option ${flow.id === selected.id ? 'active' : ''}" href="${projectUrl('flows', flow.id)}" ${flow.id === selected.id ? 'aria-current="page"' : ''}><span class="flow-option-number">0${index + 1}</span><div><strong>${escape(flow.title)}</strong><p>${formatText(flow.subtitle)}</p><span>${escape(flow.tag || 'Source-linked walkthrough')}</span></div>${renderIcon('arrow')}</a>`;
-}
-
-// Render an alternate flow branch with its source evidence.
-function renderFlowBranch(branch) {
-  return `<div class="branch"><span class="branch-marker">↳</span><div><h4>${escape(branch.title)}</h4><p>${formatText(branch.text)}</p>${renderSourceDisclosure(branch.sources)}</div></div>`;
-}
-
-// Render a saved architecture view's navigation entry.
-function renderArchitectureOption(graph, index, selected) {
-  return `<a class="flow-option ${graph.id === selected?.id ? 'active' : ''}" href="${projectUrl('architecture', graph.id)}" ${graph.id === selected?.id ? 'aria-current="page"' : ''}><span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span><div><strong>${escape(graph.title)}</strong><p>${escape(graph.requestedQuestion || 'Overall system architecture')}</p></div>${renderIcon('arrow')}</a>`;
-}
-
-// Render a compact architecture component card.
-function renderGraphNode(node) {
-  return `<button type="button" class="system-node graph-node" id="graph-node-${node.id}" data-node="${escape(node.id)}" aria-label="View details for ${escape(node.title)}" aria-haspopup="dialog"><span class="graph-node-top"><span class="system-node-icon" aria-hidden="true">${renderIcon(node.icon || 'code')}</span><span class="graph-node-kind">${escape(node.kind)}</span></span><span class="graph-node-title">${escape(node.title)}</span></button>`;
-}
-
-// Render one menu for the selected saved result, omitting copies for directories.
-function renderAnalysisMenu(kind, id) {
-  const busy = analysisActionPending || ['queued', 'running'].includes(data.job?.status);
-  const missing = kind === 'directories' && !data.hasDirectoryAnalysis;
-  const attributes = `data-analysis-kind="${kind}" data-analysis-id="${escape(id)}"`;
-  const disabled = busy ? 'disabled' : '';
-
-  return `<details class="analysis-actions actions-dropdown"><summary class="button">Actions ${renderIcon('down')}</summary><div class="actions-menu" role="group" aria-label="Analysis actions">${busy ? '<p class="analysis-actions-status">Wait for the current operation to finish.</p>' : ''}<button type="button" data-analysis-action="rerun" aria-label="Rerun analysis" ${attributes} ${disabled}>${renderIcon('rerun')}<span><strong>Rerun</strong><small>Analyze the current source</small></span></button>${kind !== 'directories' ? `<button type="button" data-analysis-action="modify" aria-label="Modify analysis" aria-haspopup="dialog" aria-controls="modify-analysis-dialog" ${attributes} ${disabled}>${renderIcon('rename')}<span><strong>Modify</strong><small>Describe changes to this result</small></span></button><button type="button" data-analysis-action="duplicate" aria-label="Duplicate analysis" ${attributes} ${disabled}>${renderIcon('duplicate')}<span><strong>Duplicate</strong><small>Create a saved copy</small></span></button>` : ''}<div class="actions-divider"></div><button type="button" class="action-delete" data-analysis-action="delete" aria-label="Delete analysis" ${attributes} ${busy || missing ? 'disabled' : ''}>${renderIcon('delete')}<span><strong>Delete</strong><small>Remove this saved analysis</small></span></button></div></details>`;
-}
-
-// Explain the directory analysis status and how to refresh it.
-function renderDirectoryAnalysisControls() {
-  return `<div class="directory-analysis-controls"><div>${renderAnalysisFreshness(data.directoryReview)}${data.hasDirectoryAnalysis ? '' : '<p>No saved directory explanations. Choose Actions → Rerun to analyze the directories.</p>'}</div></div>`;
-}
-
-// Compose a directory's summary, evidence, folders, and file inventory.
-function renderDirectoryContent(node) {
-  const folders = node.children.filter(
-    // Select the current directory's subdirectories for their cards.
-    (child) => child.type === 'directory',
-  );
-  const files = node.children.filter(
-    // Select the files directly inside the current directory.
-    (child) => child.type === 'file',
-  );
-
-  return `<div class="content-heading"><div><div class="eyebrow">DIRECTORY OVERVIEW${node.path !== data.tree.path ? ` <span>/</span> ${escape(node.kind)}` : ''}</div><h2>${escape(node.title)}</h2><p class="lead">${formatText(node.description)}</p></div>${renderAnalysisMenu('directories', 'directories')}</div>
-    ${renderDirectoryAnalysisControls()}
-    <div class="directory-summary"><p>${formatText(node.detail || node.description)}</p><div class="directory-stats"><div><strong>${node.fileCount}</strong><span>${node.fileCount === 1 ? 'file' : 'files'} inside</span></div><div><strong>${folders.length}</strong><span>subdirectories</span></div><div><strong>${files.length}</strong><span>direct ${files.length === 1 ? 'file' : 'files'}</span></div></div></div>
-    ${
-      node.highlights?.length
-        ? `<div class="notes-list">${node.highlights
-            .map(
-              // Render an analyzed directory highlight.
-              (note) => `<div>${renderIcon('check')}<span>${formatText(note)}</span></div>`,
-            )
-            .join('')}</div>`
-        : ''
-    }
-    ${renderSourceDisclosure(node.sources)}
-    ${node.entry ? `<div class="entrypoint"><span>${renderIcon('arrow')} START READING</span>${renderSourceButton({ path: node.entry }, node.entry)}</div>` : ''}
-    ${folders.length ? `<section class="subdirectories"><div class="section-label"><h3>Subdirectories</h3><span>${folders.length} directories</span></div><div class="folder-cards">${folders.map(renderDirectoryCard).join('')}</div></section>` : ''}
-    <section class="files-section"><div class="section-label"><h3>Files in this directory</h3><span>${files.length} ${files.length === 1 ? 'file' : 'files'}</span></div>${files.length ? `<div class="file-list">${files.map(renderFileRow).join('')}</div>` : '<div class="empty-small">This directory contains subdirectories only.</div>'}</section>
-    ${data.flows.length ? `<a class="related-link" href="${projectUrl('flows', data.flows[0]?.id)}"><span class="related-icon">${renderIcon('flow')}</span><div><strong>See how these pieces work together</strong><p>${escape(data.flows[0]?.title)}</p></div>${renderIcon('arrow')}</a>` : ''}`;
-}
-
-// Render the selected directory alongside its searchable navigation tree.
+// Render the selected directory and attach its search behavior.
 function renderDirectories() {
-  const nodes = flattenTree(data.tree);
-  const selection = currentRoute().selection;
   const node =
-    nodes.find(
-      // Find the requested directory or fall back to the project root.
-      (entry) => entry.type === 'directory' && entry.path === selection,
+    flattenTree(data.tree).find(
+      // A missing directory falls back to the project root.
+      (entry) => entry.type === 'directory' && entry.path === currentRoute().selection,
     ) || data.tree;
-  // Reveal ancestors when navigating directly to a nested directory.
   const segments = node.path.split('/');
-
   for (let index = 0; index < segments.length; index++)
     expanded.add(segments.slice(0, index).join('/'));
 
-  selectElement('#view').innerHTML =
-    `<div class="workspace directory-workspace"><aside class="sidebar" aria-label="Directory navigation"><label class="search-field">${renderIcon('search')}<input id="directory-search" type="search" placeholder="Find a directory…" aria-label="Find a directory" value="${escape(query)}"><kbd>/</kbd></label><div id="tree-container"><ul class="tree">${renderTree(data.tree, node.path)}</ul></div></aside><article class="directory-content">${renderDirectoryContent(node)}</article></div>`;
-  // Refresh only the directory tree when the search query changes.
+  selectElement('#view').innerHTML = renderDirectoriesView(data, node, {
+    query,
+    expanded,
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
+  // Refresh only navigation when the user filters directories.
   selectElement('#directory-search').addEventListener('input', (event) => {
     query = event.target.value;
-    const tree = renderTree(data.tree, node.path);
-    selectElement('#tree-container').innerHTML = tree
-      ? `<ul class="tree">${tree}</ul>`
-      : '<p class="no-results">No directories match. Try another name or description.</p>';
+    const tree = renderDirectoryTree(data.tree, node.path, {
+      expanded,
+      query,
+      projectName: data.name,
+      directoryUrl,
+    });
+    selectElement('#tree-container').innerHTML = renderDirectorySearchResults(tree);
   });
 }
 
-// Render one flow step with evidence, supporting calls, and saved expansion state.
-function renderFlowStep(flow, step, number) {
-  const key = `${flow.id}:${step.id}`;
-  const open = detailState.get(key) !== false;
-
-  return `<li class="timeline-item ${step.depth ? `depth-${step.depth}` : ''} ${step.external ? 'external-step' : ''}"><span class="step-number">${String(number).padStart(2, '0')}</span><details class="step-card" data-detail="${escape(key)}" ${open ? 'open' : ''}><summary><div class="step-title"><span class="function-name">${escape(step.name)}</span>${step.effect ? `<span class="effect ${step.external ? 'external' : ''}">${escape(step.effect)}</span>` : ''}<h4>${escape(step.title)}</h4></div>${renderIcon('chevron', 'step-chevron')}</summary><div class="step-body"><p>${formatText(step.description)}</p>${step.source ? renderSourceButton(step.source) : '<span class="external-reference">Outside this repository</span>'}${renderSourceDisclosure(step.sources, [step.source, ...(step.calls || [])].filter(Boolean))}${
-    step.calls?.length
-      ? `<div class="supporting-calls"><span>SUPPORTING CALLS</span><div>${step.calls
-          .map(
-            // Render supporting call links using their symbols when available.
-            (reference) =>
-              renderSourceButton(
-                reference,
-                reference.symbol
-                  ? `${reference.symbol}()`
-                  : `${reference.path}:${reference.line || '?'}`,
-              ),
-          )
-          .join('')}</div></div>`
-      : ''
-  }${
-    step.tables
-      ? `<div class="tables"><span>TABLES</span>${step.tables
-          .map(
-            // Render a table name associated with the flow step.
-            (table) => `<code>${escape(table)}</code>`,
-          )
-          .join('')}</div>`
-      : ''
-  }${step.relatedFlow ? `<a class="inline-flow-link" href="${projectUrl('flows', step.relatedFlow)}">Open the related flow →</a>` : ''}</div></details></li>`;
-}
-
-// Render the selected flow and preserve its step expansion controls.
+// Render the selected flow and attach expansion tracking to its steps.
 function renderFlows() {
-  if (!data.flows.length) {
-    selectElement('#view').innerHTML =
-      `<article class="empty-analysis"><span class="eyebrow">CODE FLOWS</span><h2>Follow a feature through the code</h2><p>Describe a user action, request, or process to trace. CodeScope will inspect this project and create a source-linked walkthrough.</p>${renderFlowComposer()}</article>`;
-    return;
-  }
-
   const selected =
     data.flows.find(
-      // Find the requested flow or fall back to the first saved flow.
+      // Restore a saved flow URL or select the first walkthrough.
       (flow) => flow.id === currentRoute().selection,
     ) || data.flows[0];
-  let number = 0;
+  selectElement('#view').innerHTML = renderFlowsView(data, selected, {
+    draft: getAnalysisRequest('flows', flowDrafts),
+    detailState,
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
+  if (!selected) return;
   const steps = selected.phases.flatMap(
-    // Collect steps across all phases for counts and expansion state.
+    // Track every step across the entire walkthrough.
     (phase) => phase.steps,
   );
-  const sourceFiles = new Set(
-    steps
-      .flatMap(
-        // Collect the primary and supporting citations for each step.
-        (step) => [step.source, ...(step.calls || [])],
-      )
-      .filter(Boolean)
-      .map(
-        // Collect cited paths for the unique source file count.
-        (reference) => reference.path,
-      ),
-  );
-  const allOpen = steps.every(
-    // Check whether every step is currently expanded.
-    (step) => detailState.get(`${selected.id}:${step.id}`) !== false,
-  );
-  selectElement('#view').innerHTML =
-    `<div class="workspace flow-workspace"><aside class="sidebar flow-sidebar" aria-label="Code flow navigation"><div class="sidebar-heading"><h2>Code flows</h2><span class="tiny-label">${data.flows.length} FLOWS</span></div><p class="sidebar-description">From a user action to the code that makes it happen.</p>${renderFlowComposer()}<div class="flow-options">${data.flows
-      .map(
-        // Render each flow navigation entry using the current selection.
-        (flow, index) => renderFlowOption(flow, index, selected),
-      )
-      .join(
-        '',
-      )}</div><div class="sidebar-bottom"><span class="eyebrow">FLOW SCOPE</span><p>${formatText(data.scope)}</p><div class="scope-tag"><i></i>${escape(data.name)}</div></div></aside><article class="flow-content"><div class="content-heading"><div><div class="eyebrow">CODE FLOW <span>/</span> 0${data.flows.indexOf(selected) + 1}</div><h2>${escape(selected.title)}</h2><p class="lead">${formatText(selected.description)}</p></div>${renderAnalysisMenu('flows', selected.id)}</div>${renderAnalysisFreshness(selected.review)}<div class="flow-stats"><span><strong>${steps.length}</strong> steps</span><span><strong>${sourceFiles.size}</strong> source files</span><span><strong>${selected.phases.length}</strong> ${selected.phases.length === 1 ? 'request' : 'request phases'}</span></div><div class="precondition"><span>STARTS WITH</span><p>${formatText(selected.precondition)}</p></div><div class="insight">${renderIcon('info')}<p>${formatText(selected.insight)}</p></div>${renderSourceDisclosure(selected.sources)}<div class="section-label execution-label"><h3>Execution walkthrough</h3><button id="toggle-details" class="text-button">${allOpen ? 'Collapse' : 'Expand'} details</button></div><div class="execution">${selected.phases
-      .map(
-        // Render a phase and its globally numbered execution steps.
-        (phase, index) =>
-          `${phase.transition ? `<div class="phase-transition"><span>↓</span>${escape(phase.transition)}</div>` : ''}<section class="phase"><div class="phase-header"><span class="phase-index">${String(index + 1).padStart(2, '0')}</span><h3>${escape(phase.title)}</h3><code>${escape(phase.route)}</code></div>${renderSourceDisclosure(phase.sources)}<ol class="timeline">${phase.steps
-            .map(
-              // Render each phase step while advancing the flow-wide number.
-              (step) => renderFlowStep(selected, step, ++number),
-            )
-            .join('')}</ol></section>`,
-      )
-      .join(
-        '',
-      )}</div><div class="outcome">${renderIcon('check')}<div><span class="eyebrow">RESULT</span><p>${formatText(selected.outcome)}</p></div></div><section class="branches"><div class="section-label"><h3>Other paths to know</h3><span>${selected.branches.length} branches</span></div><div class="branch-grid">${selected.branches.map(renderFlowBranch).join('')}</div></section><div class="trace-note">${renderIcon('info')}<p>A source-reviewed walkthrough of the main calls. Indented steps run inside the preceding caller; supporting calls show helpers. Request phases are separated by browser actions and redirects.</p></div></article></div>`;
   // Expand or collapse all steps based on their current state.
   selectElement('#toggle-details').addEventListener('click', () => {
     const currentlyOpen = [...document.querySelectorAll('[data-detail]')].every(
@@ -585,6 +324,11 @@ function renderFlows() {
   );
 }
 
+// Disable analysis actions while a request or worker is active.
+function isAnalysisBusy() {
+  return analysisActionPending || ['queued', 'running'].includes(data?.job?.status);
+}
+
 // Prefer an explicit draft, including an empty one, over the generated suggestion.
 function getAnalysisRequest(kind, drafts) {
   if (drafts.has(data.id)) return drafts.get(data.id);
@@ -593,30 +337,16 @@ function getAnalysisRequest(kind, drafts) {
   return typeof suggestion === 'string' ? suggestion : '';
 }
 
-// Render the flow question form with its draft or next suggestion and busy state.
-function renderFlowComposer() {
-  const busy = ['queued', 'running'].includes(data.job?.status);
-  return `<form id="flow-form" class="flow-composer"><label for="flow-feature">Add a code flow</label><textarea id="flow-feature" required maxlength="4000" rows="3" placeholder="What happens when a user signs in?" ${busy ? 'disabled' : ''}>${escape(getAnalysisRequest('flows', flowDrafts))}</textarea><button class="button" type="submit" ${busy ? 'disabled' : ''}>Trace flow</button><p class="flow-error" role="alert"></p></form>`;
-}
-
-// Render a saved nouns analysis in the scope navigation.
-function renderNounsOption(analysis, index, selected) {
-  return `<a class="flow-option ${analysis.id === selected?.id ? 'active' : ''}" href="${projectUrl('nouns', analysis.id)}" ${analysis.id === selected?.id ? 'aria-current="page"' : ''}><span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span><div><strong>${escape(analysis.title)}</strong><p>${escape(analysis.requestedScope || 'Entire project')}</p></div>${renderIcon('arrow')}</a>`;
-}
-
-// Keep the concept inventory compact while making its full details discoverable.
-function renderNounCard(noun) {
-  return `<section class="noun-card"><div class="noun-card-heading"><h3>${escape(noun.name)}</h3><button type="button" class="noun-details-button" data-noun="${escape(noun.id)}" aria-label="View details for ${escape(noun.name)}" aria-haspopup="dialog" aria-controls="noun-details-dialog">Details</button></div><p>${formatText(noun.description)}</p></section>`;
-}
-
 // Resolve the active nouns analysis consistently for cards and their detail dialog.
 function getSelectedNounsAnalysis() {
   const analyses = data?.nounAnalyses || [];
 
-  return analyses.find(
-    // Saved URLs select an analysis before falling back to the first available result.
-    (analysis) => analysis.id === currentRoute().selection,
-  ) || analyses[0];
+  return (
+    analyses.find(
+      // Saved URLs select an analysis before falling back to the first available result.
+      (analysis) => analysis.id === currentRoute().selection,
+    ) || analyses[0]
+  );
 }
 
 // Show the complete concept card, including responsibilities and source evidence.
@@ -633,11 +363,7 @@ function openNounDetails(id) {
   dialog.dataset.analysis = analysis.id;
   dialog.dataset.nounId = noun.id;
   selectElement('#noun-details-title').textContent = noun.name;
-  selectElement('#noun-details-body').innerHTML =
-    `<p class="node-description">${formatText(noun.description)}</p>${noun.responsibilities.length ? `<section class="noun-responsibilities"><h3>Responsibilities</h3><ul>${noun.responsibilities.map(
-      // Preserve each responsibility and its existing safe inline formatting.
-      (responsibility) => `<li>${formatText(responsibility)}</li>`,
-    ).join('')}</ul></section>` : ''}${renderSourceDisclosure(noun.sources)}`;
+  selectElement('#noun-details-body').innerHTML = renderNounDetails(noun);
   // Show the complete evidence immediately, retaining the shared source-preview controls.
   dialog.querySelectorAll('.source-disclosure').forEach((disclosure) => {
     disclosure.open = true;
@@ -646,59 +372,24 @@ function openNounDetails(id) {
   if (!dialog.open) dialog.showModal();
 }
 
-// Render relationships using the noun names rather than internal identifiers.
-function renderNounRelationships(analysis) {
-  if (!analysis.relationships.length) return '';
-  const names = new Map(analysis.nouns.map(
-    // Index the display name of every noun referenced by a relationship.
-    (noun) => [noun.id, noun.name],
-  ));
-  return `<section class="noun-relationships"><h3>Relationships</h3><div class="noun-table-scroll"><table><thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Relationship</th></tr></thead><tbody>${analysis.relationships.map(
-    // Keep relationship explanations and their evidence in the same row.
-    (relationship) => `<tr><th scope="row">${escape(names.get(relationship.from))}</th><td>${escape(names.get(relationship.to))}</td><td>${formatText(relationship.description)}${renderSourceDisclosure(relationship.sources)}</td></tr>`,
-  ).join('')}</tbody></table></div></section>`;
-}
-
-// Compose the scoped nouns form, saved analyses, and selected concept inventory.
+// Render nouns using the selected result and the current request draft.
 function renderNouns() {
-  const analyses = data.nounAnalyses || [];
-  const selected = getSelectedNounsAnalysis();
-  const busy = ['queued', 'running'].includes(data.job?.status);
-  const navigation = `<aside class="sidebar nouns-sidebar" aria-label="Nouns analysis navigation"><div class="sidebar-heading"><h2>Nouns analyses</h2><span class="tiny-label">${analyses.length} SAVED</span></div><p class="sidebar-description">Main concepts, their responsibilities, and relationships.</p><form id="nouns-form" class="flow-composer"><label for="nouns-scope">Scope (optional)</label><textarea id="nouns-scope" maxlength="4000" rows="4" placeholder="For example: job processing in src/storage.mjs" ${busy ? 'disabled' : ''}>${escape(getAnalysisRequest('nouns', nounsDrafts))}</textarea><p class="composer-hint">Leave blank for the whole project. Each run saves a separate analysis.</p><button class="button" type="submit" ${busy ? 'disabled' : ''}>Analyze nouns</button><p class="flow-error" role="alert"></p></form><div class="flow-options">${analyses.map(
-    // Keep each requested scope available as a separate navigation entry.
-    (analysis, index) => renderNounsOption(analysis, index, selected),
-  ).join('')}</div></aside>`;
-  const content = selected
-    ? `<div class="content-heading"><div><span class="eyebrow">NOUNS</span><h2>${escape(selected.title)}</h2><p class="lead">${formatText(selected.description)}</p>${renderSourceDisclosure(selected.sources)}</div>${renderAnalysisMenu('nouns', selected.id)}</div>${renderAnalysisFreshness(selected.review)}<div class="nouns-scope"><span class="eyebrow">SCOPE</span><p>${formatText(selected.scope)}</p>${selected.requestedScope ? `<p class="nouns-request">Requested: ${escape(selected.requestedScope)}</p>` : ''}</div><div class="noun-grid">${selected.nouns.map(renderNounCard).join('')}</div>${!selected.nouns.length ? '<p class="lead">No nouns were identified in this scope.</p>' : ''}${renderNounRelationships(selected)}${selected.notes.length ? `<section class="noun-notes"><h3>Notes</h3><ul>${selected.notes.map(
-      // Surface limitations and missing implementation described by the analysis.
-      (note) => `<li>${formatText(note)}</li>`,
-    ).join('')}</ul></section>` : ''}`
-    : `<span class="eyebrow">NOUNS</span><h2>Identify the concepts in ${escape(data.name)}</h2><p class="lead">Analyze the whole project or describe a folder, subsystem, or feature to focus on. Results explain what each concept means and link to its implementation.</p>${busy ? '<p class="lead">Analysis is in progress. Saved results will appear here when ready.</p>' : ''}`;
-  selectElement('#view').innerHTML = `<div class="workspace nouns-workspace">${navigation}<article class="nouns-content">${content}</article></div>`;
-}
-
-// Render saved sequence navigation with the original interaction request.
-function renderSequenceOption(analysis, index, selected) {
-  return `<a class="flow-option ${analysis.id === selected?.id ? 'active' : ''}" href="${projectUrl('sequences', analysis.id)}" ${analysis.id === selected?.id ? 'aria-current="page"' : ''}><span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span><div><strong>${escape(analysis.title)}</strong><p>${escape(analysis.requestedQuestion)}</p></div>${renderIcon('arrow')}</a>`;
-}
-
-// Share message explanations and evidence between the modal and optional list.
-function renderSequenceMessageBody(message) {
-  return `${message.condition ? `<p class="sequence-branch">When: ${escape(message.condition)}</p>` : ''}<p class="node-description">${formatText(message.description)}</p>${renderSourceDisclosure(message.sources)}`;
-}
-
-// Explain one numbered interaction with its branch condition and source evidence.
-function renderSequenceMessage(message, index, names) {
-  return `<details class="edge-row" id="sequence-message-${index + 1}"><summary><span class="edge-number">${String(index + 1).padStart(2, '0')}</span><div><span class="edge-ends">${escape(names.get(message.from))} → ${escape(names.get(message.to))} · ${escape(message.kind)}${message.inferred ? ' · Inferred' : ''}</span><strong>${escape(message.label)}</strong></div>${renderIcon('chevron')}</summary><div class="edge-details">${renderSequenceMessageBody(message)}</div></details>`;
+  selectElement('#view').innerHTML = renderNounsView(data, getSelectedNounsAnalysis(), {
+    draft: getAnalysisRequest('nouns', nounsDrafts),
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
 }
 
 // Restore the selected sequence diagram using the same fallback as its navigation.
 function getSelectedSequence() {
   const analyses = data?.sequences || [];
-  return analyses.find(
-    // Resolve saved bookmarks before falling back to the first diagram.
-    (analysis) => analysis.id === currentRoute().selection,
-  ) || analyses[0];
+  return (
+    analyses.find(
+      // Resolve saved bookmarks before falling back to the first diagram.
+      (analysis) => analysis.id === currentRoute().selection,
+    ) || analyses[0]
+  );
 }
 
 // Show a message or participant's evidence without moving the diagram viewport.
@@ -717,26 +408,25 @@ function openSequenceDetails({ messageNumber, participantId }) {
   dialog.dataset.analysis = analysis.id;
   dialog.dataset.messageNumber = message ? String(messageNumber) : '';
   selectElement('#sequence-details-title').textContent = message ? message.label : participant.name;
+  const messageLabel = message
+    ? `MESSAGE ${String(messageNumber).padStart(2, '0')} · ${message.kind}`
+    : '';
   selectElement('#sequence-details-kind').textContent = message
-    ? `MESSAGE ${String(messageNumber).padStart(2, '0')} · ${message.kind}${message.inferred ? ' · Inferred' : ''}`
+    ? `${messageLabel}${message.inferred ? ' · Inferred' : ''}`
     : 'PARTICIPANT';
   selectElement('#sequence-message-navigation').hidden = !message;
   selectElement('#sequence-message-previous').disabled = !message || messageNumber === 1;
-  selectElement('#sequence-message-next').disabled = !message || messageNumber === analysis.messages.length;
+  selectElement('#sequence-message-next').disabled =
+    !message || messageNumber === analysis.messages.length;
   selectElement('#sequence-message-position').textContent = message
-    ? `Message ${messageNumber} of ${analysis.messages.length}` : '';
+    ? `Message ${messageNumber} of ${analysis.messages.length}`
+    : '';
 
-  if (message) {
-    const names = new Map(analysis.participants.map(
-      // Use human-readable participant names in the interaction heading.
-      (entry) => [entry.id, entry.name],
-    ));
-    selectElement('#sequence-details-body').innerHTML =
-      `<p class="sequence-message-endpoints">${escape(names.get(message.from))} → ${escape(names.get(message.to))}</p>${renderSequenceMessageBody(message)}`;
-  } else {
-    selectElement('#sequence-details-body').innerHTML =
-      `<p class="node-description">${formatText(participant.description)}</p>${renderSourceDisclosure(participant.sources)}`;
-  }
+  selectElement('#sequence-details-body').innerHTML = renderSequenceDetails(
+    analysis,
+    message,
+    participant,
+  );
 
   selectElement('#sequence-details-body').scrollTop = 0;
   if (!dialog.open) dialog.showModal();
@@ -747,9 +437,12 @@ function stepSequenceMessage(direction) {
   const dialog = selectElement('#sequence-details-dialog');
   const analysis = getSelectedSequence();
   if (
-    !dialog.open || !dialog.dataset.messageNumber ||
-    dialog.dataset.route !== location.pathname || dialog.dataset.analysis !== analysis?.id
-  ) return;
+    !dialog.open ||
+    !dialog.dataset.messageNumber ||
+    dialog.dataset.route !== location.pathname ||
+    dialog.dataset.analysis !== analysis?.id
+  )
+    return;
   const messageNumber = Number(dialog.dataset.messageNumber) + direction;
   if (!Number.isInteger(messageNumber) || !analysis.messages[messageNumber - 1]) return;
   const focusedControl = document.activeElement;
@@ -757,39 +450,19 @@ function stepSequenceMessage(direction) {
 
   // Keep keyboard focus usable when the pressed button reaches a sequence boundary.
   if (focusedControl?.disabled)
-    selectElement(direction > 0 ? '#sequence-message-previous' : '#sequence-message-next')
-      .focus({ preventScroll: true });
+    selectElement(direction > 0 ? '#sequence-message-previous' : '#sequence-message-next').focus({
+      preventScroll: true,
+    });
 }
 
-// Compose the sequence request form, lifeline diagram, and source-backed walkthrough.
+// Render the selected sequence and restore its zoom preferences.
 function renderSequences() {
-  const analyses = data.sequences || [];
   const selected = getSelectedSequence();
-  const busy = ['queued', 'running'].includes(data.job?.status);
-  const navigation = `<aside class="sidebar sequence-sidebar" aria-label="Sequence diagram navigation"><div class="sidebar-heading"><h2>Sequence diagrams</h2><span class="tiny-label">${analyses.length} SAVED</span></div><p class="sidebar-description">Who calls whom, in what order, and what happens next.</p><form id="sequence-form" class="flow-composer"><label for="sequence-question">Describe an interaction</label><textarea id="sequence-question" required maxlength="4000" rows="4" placeholder="What happens when an analysis starts?" ${busy ? 'disabled' : ''}>${escape(getAnalysisRequest('sequences', sequenceDrafts))}</textarea><p class="composer-hint">Each request saves a separate diagram with source links.</p><button class="button" type="submit" ${busy ? 'disabled' : ''}>Generate sequence</button><p class="flow-error" role="alert"></p></form><div class="flow-options">${analyses.map(
-    // Keep earlier diagrams available while another analysis is running.
-    (analysis, index) => renderSequenceOption(analysis, index, selected),
-  ).join('')}</div></aside>`;
-  let content = `<span class="eyebrow">SEQUENCES</span><h2>Follow an interaction in ${escape(data.name)}</h2><p class="lead">Describe an action to see its participants, calls, replies, and asynchronous handoffs in order.</p>${busy ? '<p class="lead">Analysis is in progress. Saved diagrams will appear here when ready.</p>' : ''}`;
-
-  if (selected) {
-    const names = new Map(selected.participants.map(
-      // Translate message endpoint IDs into readable participant names.
-      (participant) => [participant.id, participant.name],
-    ));
-    content = `<div class="content-heading"><div><span class="eyebrow">SEQUENCE ANALYSIS</span><h2>${escape(selected.title)}</h2><p class="lead">${formatText(selected.description)}</p>${renderSourceDisclosure(selected.sources)}</div>${renderAnalysisMenu('sequences', selected.id)}</div>${renderAnalysisFreshness(selected.review)}<div class="precondition"><span>STARTS WITH</span><p>${formatText(selected.precondition)}</p></div>${selected.messages.length ? `<figure class="sequence-figure"><figcaption><strong>Read from top to bottom</strong><span>Solid: call · Dashed: reply · Open arrow: async · Amber: inferred</span><span>Drag blank space to pan. Select a participant or message to open its details and sources. Fit to width shows all participants.</span>${renderSequenceZoomControls()}</figcaption><div class="sequence-scroll" tabindex="0" role="region" aria-label="Scrollable sequence diagram">${renderSequenceDiagram(selected)}</div></figure><details class="sequence-participants"><summary>Participants · ${selected.participants.length}</summary>${selected.participants.map(
-      // Describe each lifeline and retain its implementation evidence.
-      (participant) => `<section><h3>${escape(participant.name)}</h3><p>${formatText(participant.description)}</p>${renderSourceDisclosure(participant.sources)}</section>`,
-    ).join('')}</details><details class="sequence-messages"><summary>Messages and sources · ${selected.messages.length}</summary>${selected.messages.map(
-      // Match message numbers to the arrows in the diagram.
-      (message, index) => renderSequenceMessage(message, index, names),
-    ).join('')}</details>` : '<p class="lead">No implemented interaction was found for this request.</p>'}<div class="outcome"><span>${renderIcon('check')} OUTCOME</span><p>${formatText(selected.outcome)}</p></div>${selected.notes.length ? `<section class="noun-notes"><h3>Notes and branches</h3><ul>${selected.notes.map(
-      // Explain loops, alternative paths, concurrency, and coverage limitations.
-      (note) => `<li>${formatText(note)}</li>`,
-    ).join('')}</ul></section>` : ''}`;
-  }
-
-  selectElement('#view').innerHTML = `<div class="workspace sequence-workspace">${navigation}<article class="sequence-content">${content}</article></div>`;
+  selectElement('#view').innerHTML = renderSequencesView(data, selected, {
+    draft: getAnalysisRequest('sequences', sequenceDrafts),
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
   const figure = selectElement('.sequence-figure');
   if (figure) {
     const key = `${data.id}:${selected.id}`;
@@ -813,68 +486,6 @@ function getSelectedArchitecture() {
       (graph) => graph.id === currentRoute().selection,
     ) || views[0]
   );
-}
-
-// Compose architecture navigation and the focused diagram question form.
-function renderArchitectureNavigation(views, selected) {
-  const busy = ['queued', 'running'].includes(data.job?.status);
-  return `<aside class="sidebar architecture-sidebar" aria-label="Architecture navigation"><div class="sidebar-heading"><h2>Architecture views</h2><span class="tiny-label">${views.length} ${views.length === 1 ? 'DIAGRAM' : 'DIAGRAMS'}</span></div><p class="sidebar-description">Explore the whole system or focus on a smaller part.</p><form id="architecture-form" class="flow-composer"><label for="architecture-question">Ask an architecture question</label><textarea id="architecture-question" required maxlength="4000" rows="4" placeholder="How does authentication fit together?" ${busy ? 'disabled' : ''}>${escape(getAnalysisRequest('architecture', architectureDrafts))}</textarea><p class="composer-hint">Each question adds a saved, source-linked diagram.</p><button class="button" type="submit" ${busy ? 'disabled' : ''}>Generate diagram</button><p class="architecture-error flow-error" role="alert"></p></form><div class="flow-options">${views
-    .map(
-      // Render each saved diagram with the selected view highlighted.
-      (graph, index) => renderArchitectureOption(graph, index, selected),
-    )
-    .join('')}</div></aside>`;
-}
-
-// Group components into dependency levels while tolerating cycles.
-function groupGraphLevels(graph) {
-  const rank = new Map(
-    graph.nodes.map(
-      // Initialize every component's display rank.
-      (node) => [node.id, 0],
-    ),
-  );
-  const degree = new Map(
-    graph.nodes.map(
-      // Initialize incoming connection counts for topological traversal.
-      (node) => [node.id, 0],
-    ),
-  );
-
-  for (const edge of graph.edges)
-    if (edge.from !== edge.to) degree.set(edge.to, degree.get(edge.to) + 1);
-
-  const queue = graph.nodes
-    .filter(
-      // Select components without incoming dependencies as traversal roots.
-      (node) => !degree.get(node.id),
-    )
-    .map(
-      // Read root identifiers for the traversal queue.
-      (node) => node.id,
-    );
-
-  for (let index = 0; index < queue.length; index++) {
-    const id = queue[index];
-
-    for (const edge of graph.edges.filter(
-      // Visit outgoing connections while ignoring self loops.
-      (edge) => edge.from === id && edge.to !== id,
-    )) {
-      rank.set(edge.to, Math.max(rank.get(edge.to), rank.get(id) + 1));
-      degree.set(edge.to, degree.get(edge.to) - 1);
-      if (!degree.get(edge.to)) queue.push(edge.to);
-    }
-  }
-
-  const groups = [];
-
-  for (const node of graph.nodes) {
-    const level = Math.min(rank.get(node.id), graph.nodes.length - 1);
-    (groups[level] ||= []).push(node);
-  }
-
-  return groups.filter(Boolean);
 }
 
 // Measure diagram cards and update SVG connection paths.
@@ -903,64 +514,15 @@ function drawGraphEdges() {
     document.getElementById(`graph-edge-${edge.index}`).setAttribute('d', edge.path);
 }
 
-// Render architecture navigation, components, connections, and notes.
+// Render the selected graph and attach measurement and highlighting behavior.
 function renderArchitecture() {
-  const views = getArchitectureViews();
   const graph = getSelectedArchitecture();
-  const navigation = renderArchitectureNavigation(views, graph);
-  if (!graph) {
-    selectElement('#view').innerHTML =
-      `<div class="workspace architecture-workspace">${navigation}<article class="architecture-content"><span class="eyebrow">ARCHITECTURE</span><h2>Explore the architecture of ${escape(data.name)}</h2><p class="lead">${['running', 'queued'].includes(data.job?.status) ? 'Analysis is in progress. Saved diagrams will appear here as they finish.' : 'Ask a question to diagram a subsystem, boundary, or dependency.'}</p></article></div>`;
-    return;
-  }
-
-  const titles = new Map(
-    graph.nodes.map(
-      // Index component titles for readable connection labels.
-      (node) => [node.id, node.title],
-    ),
-  );
-  const levels = groupGraphLevels(graph);
-  selectElement('#view').innerHTML =
-    `<div class="workspace architecture-workspace">${navigation}<article class="architecture-content"><div class="content-heading"><div><div class="eyebrow">ARCHITECTURE <span>/</span> ${String(views.indexOf(graph) + 1).padStart(2, '0')} OF ${views.length}</div><h2>${escape(graph.title)}</h2><p class="lead">${formatText(graph.description)}</p>${renderSourceDisclosure(graph.sources)}</div>${renderAnalysisMenu('architecture', graph.id)}</div>
-    ${renderAnalysisFreshness(graph.review)}
-    ${graph.requestedQuestion ? `<div class="architecture-question"><span class="eyebrow">QUESTION</span><p>${escape(graph.requestedQuestion)}</p></div>` : ''}
-    <figure class="system-figure" aria-labelledby="system-caption"><figcaption id="system-caption"><span>${escape(data.name)} · ${(graph.id === 'overview' || graph.requestedQuestion === null) ? 'System overview' : 'Focused architecture'}</span><span class="diagram-legend"><span><i></i>Source-backed connection</span><span><i class="oauth-dot"></i>Redirect or inferred connection</span></span></figcaption>
-    <div class="graph-canvas"><svg class="graph-edges" aria-hidden="true"><defs><marker id="graph-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path d="M 2 2 L 8 5 L 2 8"/></marker><marker id="graph-arrow-inferred" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path d="M 2 2 L 8 5 L 2 8"/></marker></defs>${graph.edges
-      .map(
-        // Render an SVG path placeholder with the correct arrow style.
-        (edge, index) =>
-          `<path id="graph-edge-${index}" class="${edge.inferred || edge.kind === 'redirect' ? 'inferred-edge' : ''}" marker-end="url(#${edge.inferred || edge.kind === 'redirect' ? 'graph-arrow-inferred' : 'graph-arrow'})"/>`,
-      )
-      .join('')}</svg>
-    ${
-      levels
-        .map(
-          // Render a row of component cards at the same dependency level.
-          (level) => `<div class="graph-level">${level.map(renderGraphNode).join('')}</div>`,
-        )
-        .join('') ||
-      '<div class="graph-empty"><h3>No components in this diagram</h3><p>All nodes have been removed. Generate a new architecture view, or analyze the project to rebuild its overall diagram.</p></div>'
-    }</div>
-    <div class="diagram-caption">${renderIcon('info')}<p>Hover or focus a component to highlight its connections. Click it to view descriptions, sources, and related components in a dialog. Inferred relationships are marked explicitly.</p></div></figure>
-    <section class="graph-connections"><div class="section-label"><h3>Connections</h3><span>${graph.edges.length} ${graph.edges.length === 1 ? 'relationship' : 'relationships'}</span></div>${
-      graph.edges
-        .map(
-          // Render a connection's label, description, and source evidence.
-          (edge, index) =>
-            `<details class="edge-row" data-edge="${index}"><summary><span class="edge-number">${index + 1}</span><div><span class="edge-ends">${escape(titles.get(edge.from))} → ${escape(titles.get(edge.to))}</span><strong>${escape(edge.label)}</strong></div>${edge.inferred ? '<span class="effect external">Inferred</span>' : ''}${renderIcon('chevron')}</summary><div class="edge-details"><p>${formatText(edge.description)}</p>${renderSourceDisclosure(edge.sources)}</div></details>`,
-        )
-        .join('') || '<p class="lead">No inter-component connections were identified.</p>'
-    }</section>
-    <div class="architecture-notes">${(graph.notes || [])
-      .map(
-        // Render an architecture note and its optional related flow link.
-        (note) =>
-          `<section><h3>${escape(note.title)}</h3><p>${formatText(note.description)}</p>${renderSourceDisclosure(note.sources)}${note.flow ? `<a href="${projectUrl('flows', note.flow)}">${escape(note.link)} ${renderIcon('arrow')}</a>` : ''}</section>`,
-      )
-      .join(
-        '',
-      )}</div><div class="scope-note">${renderIcon('info')}<span>${formatText(graph.scope)}</span></div></article></div>`;
+  selectElement('#view').innerHTML = renderArchitectureView(data, graph, {
+    draft: getAnalysisRequest('architecture', architectureDrafts),
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
+  if (!graph) return;
   diagramObserver = new ResizeObserver(drawGraphEdges);
   diagramObserver.observe(selectElement('.graph-canvas'));
 
@@ -1017,39 +579,7 @@ function openNodeDetails(id) {
   selectElement('#delete-node').textContent = 'Delete node';
   selectElement('#node-kind').textContent = node.kind;
   selectElement('#node-title').textContent = node.title;
-  const related = graph.edges.filter(
-    // Select incoming and outgoing connections for the component.
-    (edge) => edge.from === id || edge.to === id,
-  );
-  selectElement('#node-body').innerHTML =
-    `<p class="node-description">${formatText(node.description)}</p>${
-      node.tags?.length
-        ? `<div class="system-tables">${node.tags
-            .map(
-              // Render a component's associated technology or data tag.
-              (tag) => `<code>${escape(tag)}</code>`,
-            )
-            .join('')}</div>`
-        : ''
-    }${renderSourceDisclosure(node.sources)}${
-      related.length
-        ? `<section class="node-relationships"><h3>Connections</h3><ul>${related
-            .map(
-              // Render a navigable connection to the neighboring component.
-              (edge) => {
-                const outgoing = edge.from === id;
-                const other = graph.nodes.find(
-                  // Find the component at the opposite end of a connection.
-                  (entry) => entry.id === (outgoing ? edge.to : edge.from),
-                );
-                if (!other) return '';
-
-                return `<li><button type="button" class="node-connection" data-node="${escape(other.id)}" aria-label="View details for ${escape(other.title)}" aria-haspopup="dialog"><span class="node-direction">${outgoing ? 'To' : 'From'}</span><span class="node-connection-main"><strong>${escape(other.title)}</strong><span class="node-connection-label">${formatText(edge.label)}</span>${edge.inferred ? '<span class="effect external">Inferred</span>' : ''}</span>${renderIcon('arrow')}</button></li>`;
-              },
-            )
-            .join('')}</ul></section>`
-        : ''
-    }`;
+  selectElement('#node-body').innerHTML = renderNodeDetails(graph, node);
   selectElement('#node-body').scrollTop = 0;
   dialog.showModal();
 }
@@ -1071,8 +601,12 @@ async function deleteCurrentNode() {
     // Count the connections that deletion would remove.
     (edge) => edge.from === node.id || edge.to === node.id,
   ).length;
+  const connectionLabel = connections === 1 ? 'its connection' : `its ${connections} connections`;
+  const lastNodeNotice =
+    graph.nodes.length === 1 ? ' This is the last node, so the diagram will be empty.' : '';
   selectElement('#delete-node-description').textContent =
-    `Delete “${node.title}”${connections ? ` and ${connections === 1 ? 'its connection' : `its ${connections} connections`}` : ''} from “${graph.title}”?${graph.nodes.length === 1 ? ' This is the last node, so the diagram will be empty.' : ''}`;
+    `Delete “${node.title}”${connections ? ` and ${connectionLabel}` : ''}` +
+    ` from “${graph.title}”?${lastNodeNotice}`;
   confirmation.returnValue = '';
   const confirmed = await new Promise(
     // Wait for the deletion confirmation dialog to close.
@@ -1100,9 +634,8 @@ async function deleteCurrentNode() {
   for (const link of details.querySelectorAll('.node-connection')) link.disabled = true;
 
   try {
-    await postJson(
-      `/api/projects/${projectId}/architecture/${encodeURIComponent(diagramId)}/nodes/${encodeURIComponent(node.id)}/delete`,
-    );
+    const graphUrl = `/api/projects/${projectId}/architecture/${encodeURIComponent(diagramId)}`;
+    await postJson(`${graphUrl}/nodes/${encodeURIComponent(node.id)}/delete`);
     if (data.id === projectId) {
       details.close();
       await loadCurrentProject();
@@ -1120,23 +653,9 @@ async function deleteCurrentNode() {
   }
 }
 
-// Render a saved result with its type, last analysis date, and original detail link.
-function renderAnalysisEntry(entry) {
-  const date = entry.analyzedAt
-    ? `<time datetime="${escape(entry.analyzedAt)}">Analyzed ${escape(new Date(entry.analyzedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))}</time>`
-    : '<span>Analysis date unavailable</span>';
-
-  return `<li><a class="analysis-list-entry" href="${projectUrl(entry.tab, entry.id)}"><span class="analysis-list-icon">${renderIcon(entry.icon)}</span><div class="analysis-list-content"><div class="analysis-list-meta"><span class="analysis-type">${escape(entry.label)}</span>${date}</div><h3>${escape(entry.title)}</h3><p>${formatText(entry.description)}</p></div>${renderIcon('arrow')}</a></li>`;
-}
-
-// List every saved analysis in this project, most recently analyzed first.
+// Show saved results in analysis date order.
 function renderAllAnalyses() {
-  const entries = getAnalysisEntries(data);
-
-  selectElement('#view').innerHTML =
-    `<article class="all-analyses"><div class="all-analyses-heading"><span class="eyebrow">ALL</span><h2>All analyses</h2><p>Diagrams and analyses, most recently analyzed first.</p></div>${entries.length
-      ? `<ul class="analysis-list" aria-label="Analyses, most recently analyzed first">${entries.map(renderAnalysisEntry).join('')}</ul>`
-      : '<div class="all-analyses-empty"><h3>No saved analyses yet</h3><p>Run an analysis from any of the other tabs. Completed results will appear here.</p></div>'}</article>`;
+  selectElement('#view').innerHTML = renderAllAnalysesView(data, projectUrl);
 }
 
 // Render the current project view and close dialogs tied to an obsolete selection.
@@ -1157,11 +676,15 @@ function render() {
   }
   const nounDialog = selectElement('#noun-details-dialog');
   const nounsAnalysis = getSelectedNounsAnalysis();
-  if (nounDialog.open && (nounDialog.dataset.route !== location.pathname ||
-      nounDialog.dataset.analysis !== nounsAnalysis?.id || !nounsAnalysis?.nouns.some(
+  if (
+    nounDialog.open &&
+    (nounDialog.dataset.route !== location.pathname ||
+      nounDialog.dataset.analysis !== nounsAnalysis?.id ||
+      !nounsAnalysis?.nouns.some(
         // Close details when the selected concept no longer belongs to this result.
         (noun) => noun.id === nounDialog.dataset.nounId,
-      ))) {
+      ))
+  ) {
     selectElement('#source-dialog').close();
     nounDialog.close();
   }
@@ -1192,7 +715,9 @@ function render() {
   else if (tab === 'sequences') renderSequences();
   else if (tab === 'code-scan') {
     selectElement('#view').innerHTML = renderCodeScan(
-      data.codeScan, currentRoute().selection, data.name,
+      data.codeScan,
+      currentRoute().selection,
+      data.name,
       // Keep directory selections addressable through reloads and Back/Forward.
       (path) => projectUrl('code-scan', path),
     );
@@ -1223,7 +748,9 @@ const projectApiUrl = (action = '') => `/api/projects/${data.id}${action ? `/${a
 
 // Show a request error in the project notice area.
 function showError(message) {
-  selectElement('#notice').innerHTML = `<div class="warning">${escape(message)}</div>`;
+  selectElement('#notice').innerHTML = /* HTML */ `
+    <div class="warning">${escape(message)}</div>
+  `;
 }
 
 // Tick only the elapsed label so the progress list and analysis view stay in place.
@@ -1236,8 +763,8 @@ function updateJobElapsedTime() {
 function dismissJobProgress() {
   if (!data || !jobDismissals.dismiss(data.id, data.job)) return;
   renderJob();
-  const nextControl = selectElement('.analysis-actions > summary') ||
-    selectElement('#project-actions > summary');
+  const nextControl =
+    selectElement('.analysis-actions > summary') || selectElement('#project-actions > summary');
   nextControl?.focus({ preventScroll: true });
 }
 
@@ -1253,7 +780,9 @@ function renderSelectedJobPrompt() {
   const input = schemaSelected ? prompt.schema : prompt;
   selectElement('#job-input-prompt').setAttribute('aria-pressed', String(!schemaSelected));
   selectElement('#job-input-schema').setAttribute('aria-pressed', String(schemaSelected));
-  selectElement('#job-input-label').textContent = schemaSelected ? 'Saved output schema' : 'Saved prompt';
+  selectElement('#job-input-label').textContent = schemaSelected
+    ? 'Saved output schema'
+    : 'Saved prompt';
   selectElement('#job-prompt-path').textContent = input?.path || '';
   let content = input?.content ?? 'No saved output schema is available for this stage.';
   if (schemaSelected && input) {
@@ -1265,8 +794,10 @@ function renderSelectedJobPrompt() {
   }
 
   const preview = selectElement('#job-prompt-text');
-  preview.setAttribute('aria-label', schemaSelected
-    ? 'Output schema supplied to Codex' : 'Exact prompt sent to Codex');
+  preview.setAttribute(
+    'aria-label',
+    schemaSelected ? 'Output schema supplied to Codex' : 'Exact prompt sent to Codex',
+  );
   if (preview.textContent !== content) preview.textContent = content;
 }
 
@@ -1285,22 +816,33 @@ async function loadJobPrompts() {
     selectElement('#job-prompts-content').hidden = !result.prompts.length;
     if (!result.prompts.length) {
       const pending = ['queued', 'running'].includes(data?.job?.status);
-      status.textContent = `${pending ? 'The prompt will appear when the analysis stage starts.' : 'No saved prompt is available for this job.'} Job files: ${result.directory}`;
+      const message = pending
+        ? 'The prompt will appear when the analysis stage starts.'
+        : 'No saved prompt is available for this job.';
+      status.textContent = `${message} Job files: ${result.directory}`;
       return;
     }
 
     const stage = selectElement('#job-prompt-stage');
-    const options = result.prompts.map(
-      // Name each generated stage using the progress panel's labels.
-      (prompt) => `<option value="${escape(prompt.stage)}">${escape(jobTypeLabels[prompt.stage] || prompt.stage)}</option>`,
-    ).join('');
+    const options = result.prompts
+      .map(
+        // Name each generated stage using the progress panel's labels.
+        (prompt) => /* HTML */ `
+          <option value="${escape(prompt.stage)}">
+            ${escape(jobTypeLabels[prompt.stage] || prompt.stage)}
+          </option>
+        `,
+      )
+      .join('');
     if (stage.innerHTML !== options) {
       const selected = stage.value;
       stage.innerHTML = options;
       stage.value = result.prompts.some(
         // Keep a manually selected earlier stage available as later stages start.
         (prompt) => prompt.stage === selected,
-      ) ? selected : result.prompts.at(-1).stage;
+      )
+        ? selected
+        : result.prompts.at(-1).stage;
     }
     renderSelectedJobPrompt();
   } catch (error) {
@@ -1351,19 +893,28 @@ function renderJob() {
   const completed = job.status === 'completed';
   const messages = getJobMessages(job);
   const signature = JSON.stringify([
-    data.id, job.id, job.kind, job.status, job.stage, job.startedAt, job.finishedAt,
-    messages, job.coverage,
+    data.id,
+    job.id,
+    job.kind,
+    job.status,
+    job.stage,
+    job.startedAt,
+    job.finishedAt,
+    messages,
+    job.coverage,
   ]);
 
   // Polling unchanged progress must not replay the incoming-message animation.
   if (!panel.firstElementChild || panel.dataset.signature !== signature) {
-    const newMessage = panel.dataset.jobId === job.id &&
-      panel.dataset.latestMessage !== messages.at(-1)?.message;
-    panel.innerHTML =
-      `<div class="job-card ${busy ? 'job-active' : completed ? 'job-completed' : ''} ${['failed', 'interrupted'].includes(job.status) ? 'job-failed' : ''}"><div class="job-content"><div class="job-heading"><span class="job-type">${job.modificationPrompt ? 'Modify · ' : ''}${escape(jobTypeLabels[job.kind] || 'Analysis')}</span>${job.status === 'running' ? '' : `<span class="eyebrow">${completed ? `${renderIcon('check')} Analysis complete` : escape(job.status)}</span>`}<span class="job-elapsed">${renderIcon('clock')}<span>Elapsed</span><span id="job-elapsed-time" aria-live="off">${formatJobElapsed(job)}</span></span></div><ol class="job-messages ${messages.length === 4 ? 'has-four' : ''}" aria-label="Recent analysis progress" aria-live="polite">${messages.map(
-        // Keep chronological order, muting the oldest row only when all four exist.
-        ({ message, timestamp }, index) => `<li${newMessage && index === messages.length - 1 ? ' class="job-message-new"' : ''}><time class="job-message-time" ${timestamp ? `datetime="${escape(timestamp)}"` : 'title="Timestamp unavailable for this older message"'}>${formatJobMessageTime(timestamp)}</time><span>${escape(message)}</span></li>`,
-      ).join('')}</ol>${job.coverage?.limited ? `<small>Analysis snapshot: ${job.coverage.included} of ${job.coverage.total} text files. Large files and instruction files may be omitted.</small>` : ''}</div><div class="job-controls"><button type="button" class="button" data-action="view-prompt" aria-haspopup="dialog" aria-controls="job-prompts-dialog">View prompt</button>${busy ? '<button class="button" data-action="cancel">Cancel</button>' : `${['failed', 'cancelled', 'interrupted'].includes(job.status) ? '<button class="button" data-action="retry">Retry</button>' : ''}<button type="button" class="button ${completed ? 'primary' : ''}" data-action="dismiss-job" aria-label="Close analysis progress">Close</button>`}</div></div>`;
+    const newMessage =
+      panel.dataset.jobId === job.id && panel.dataset.latestMessage !== messages.at(-1)?.message;
+    panel.innerHTML = renderJobProgress(job, {
+      busy,
+      completed,
+      messages,
+      newMessage,
+      jobTypeLabels,
+    });
     panel.dataset.signature = signature;
     panel.dataset.jobId = job.id;
     panel.dataset.latestMessage = messages.at(-1)?.message || '';
@@ -1383,12 +934,18 @@ function updateHeader() {
   selectElement('#project-info-title').textContent = data.name;
   selectElement('#project-path').textContent = data.root;
   selectElement('#project-path').title = data.root;
-  selectElement('#stack').innerHTML = data.stack
-    .map(
-      // Render a technology label in the project Info dialog.
-      (label) => `<span class="stack-label">${escape(label)}</span>`,
-    )
-    .join('') || '<span class="stack-empty">No stack tags yet.</span>';
+  selectElement('#stack').innerHTML =
+    data.stack
+      .map(
+        // Render a technology label in the project Info dialog.
+        (label) => /* HTML */ `
+          <span class="stack-label">${escape(label)}</span>
+        `,
+      )
+      .join('') ||
+    /* HTML */ `
+      <span class="stack-empty">No stack tags yet.</span>
+    `;
   selectElement('#flow-count').textContent = data.flows.length;
   selectElement('#architecture-count').textContent = getArchitectureViews().length;
   selectElement('#nouns-count').textContent = (data.nounAnalyses || []).length;
@@ -1403,14 +960,15 @@ function updateHeader() {
     ? 'Wait for the current analysis to finish before editing this diagram.'
     : 'Delete this node and its connections from the saved diagram';
 
-  for (const tab of projectTabs)
-    selectElement(`#tab-${tab}`).href = projectUrl(tab);
+  for (const tab of projectTabs) selectElement(`#tab-${tab}`).href = projectUrl(tab);
 
   selectElement('.brand').href = projectUrl('directories');
   const messages = [];
   if (data.warnings?.length) messages.push(data.warnings.join(' '));
   selectElement('#notice').innerHTML = messages.length
-    ? `<div class="warning">${escape(messages.join(' '))}</div>`
+    ? /* HTML */ `
+        <div class="warning">${escape(messages.join(' '))}</div>
+      `
     : '';
   renderJob();
 }
@@ -1422,10 +980,14 @@ async function loadProjects() {
     ? projects
         .map(
           // Render a registered project as a picker option.
-          (project) => `<option value="${project.id}">${escape(project.name)}</option>`,
+          (project) => /* HTML */ `
+            <option value="${project.id}">${escape(project.name)}</option>
+          `,
         )
         .join('')
-    : '<option value="">No projects yet</option>';
+    : /* HTML */ `
+        <option value="">No projects yet</option>
+      `;
   selectElement('#project-picker').disabled = !projects.length;
   if (data) selectElement('#project-picker').value = data.id;
 }
@@ -1491,7 +1053,11 @@ async function loadCurrentProject({ quiet = false } = {}) {
       !next.job.analysisId &&
       currentRoute().tab === (next.job.kind === 'sequence' ? 'sequences' : next.job.kind)
     )
-      history.replaceState(null, '', projectUrl(next.job.kind === 'sequence' ? 'sequences' : next.job.kind, next.job.resultId));
+      history.replaceState(
+        null,
+        '',
+        projectUrl(next.job.kind === 'sequence' ? 'sequences' : next.job.kind, next.job.resultId),
+      );
     if (!quiet || changed) render();
     if (['queued', 'running'].includes(data.job?.status))
       pollTimer = setTimeout(
@@ -1502,9 +1068,7 @@ async function loadCurrentProject({ quiet = false } = {}) {
   } catch (error) {
     if (sequence !== loadSequence || id !== currentRoute().id) return;
     showError(error.message);
-    if (!data || data.id !== id)
-      selectElement('#view').innerHTML =
-        '<div class="error-state"><h2>Could not open this project</h2><p>Select another project, or check that its directory is still available.</p></div>';
+    if (!data || data.id !== id) selectElement('#view').innerHTML = renderProjectLoadError();
     if (quiet)
       pollTimer = setTimeout(
         // Retry a failed background poll after a short delay.
@@ -1521,7 +1085,8 @@ function confirmProjectDeletion() {
   selectElement('#action-project').textContent = data.name;
   selectElement('#action-title').textContent = 'Delete project?';
   selectElement('#action-description').textContent =
-    `Delete “${data.name}” from CodeScope? This removes its saved explanations, diagrams, flows, Nouns analyses, sequence analyses, and debugging job history. This cannot be undone.`;
+    `Delete “${data.name}” from CodeScope? This removes its saved explanations, diagrams, ` +
+    'flows, Nouns analyses, sequence analyses, and debugging job history. This cannot be undone.';
   selectElement('#action-usage').textContent =
     'Any queued or running analysis for this project will be stopped.';
   selectElement('#action-result').textContent =
@@ -1543,13 +1108,19 @@ function confirmProjectDeletion() {
 // Resolve the selected result's name for an explicit deletion confirmation.
 function analysisTitle(kind, id) {
   if (kind === 'directories') return 'Directories';
-  const collections = { architecture: data.architectures, flows: data.flows,
-    nouns: data.nounAnalyses, sequences: data.sequences };
+  const collections = {
+    architecture: data.architectures,
+    flows: data.flows,
+    nouns: data.nounAnalyses,
+    sequences: data.sequences,
+  };
 
-  return collections[kind]?.find(
-    // Use the captured ID so changing selection cannot delete a different result.
-    (analysis) => analysis.id === id,
-  )?.title || 'this analysis';
+  return (
+    collections[kind]?.find(
+      // Use the captured ID so changing selection cannot delete a different result.
+      (analysis) => analysis.id === id,
+    )?.title || 'this analysis'
+  );
 }
 
 // Confirm removal of one saved analysis using the shared confirmation dialog.
@@ -1558,8 +1129,10 @@ function confirmAnalysisDeletion(title) {
   if (dialog.open) return Promise.resolve(false);
   selectElement('#action-project').textContent = data.name;
   selectElement('#action-title').textContent = 'Delete analysis?';
-  selectElement('#action-description').textContent = `Delete “${title}”? This removes its saved result and cannot be undone.`;
-  selectElement('#action-usage').textContent = 'Your other analyses and source files stay in place.';
+  selectElement('#action-description').textContent =
+    `Delete “${title}”? This removes its saved result and cannot be undone.`;
+  selectElement('#action-usage').textContent =
+    'Your other analyses and source files stay in place.';
   selectElement('#action-result').textContent = 'You can run a new analysis later.';
   selectElement('#confirm-action').textContent = 'Delete analysis';
   selectElement('#confirm-action').className = 'button danger';
@@ -1596,10 +1169,14 @@ function promptForAnalysisModification(kind, id) {
     // Resolve only an explicit submission and retain the text after cancellation.
     (resolve) => {
       // Store the draft before the next rendering can change the selected analysis.
-      dialog.addEventListener('close', () => {
-        modificationDrafts.set(key, input.value);
-        resolve(dialog.returnValue === 'modify' ? input.value.trim() : null);
-      }, { once: true });
+      dialog.addEventListener(
+        'close',
+        () => {
+          modificationDrafts.set(key, input.value);
+          resolve(dialog.returnValue === 'modify' ? input.value.trim() : null);
+        },
+        { once: true },
+      );
       dialog.showModal();
     },
   );
@@ -1607,8 +1184,13 @@ function promptForAnalysisModification(kind, id) {
 
 // Apply one menu action and select its resulting copy or remaining analyses.
 async function runAnalysisAction(action, kind, id) {
-  if (!data || analysisActionPending || deletingProject ||
-      ['queued', 'running'].includes(data.job?.status)) return;
+  if (
+    !data ||
+    analysisActionPending ||
+    deletingProject ||
+    ['queued', 'running'].includes(data.job?.status)
+  )
+    return;
   const projectId = data.id;
   const pathname = location.pathname;
   analysisActionPending = true;
@@ -1619,15 +1201,20 @@ async function runAnalysisAction(action, kind, id) {
     if (action === 'modify' && !prompt) return;
     if (data?.id !== projectId || location.pathname !== pathname) return;
     render();
-    const url = kind === 'directories' && !data.hasDirectoryAnalysis && action === 'rerun'
-      ? `/api/projects/${projectId}/directories`
-      : analysisActionUrl(projectId, kind, id, action);
+    const url =
+      kind === 'directories' && !data.hasDirectoryAnalysis && action === 'rerun'
+        ? `/api/projects/${projectId}/directories`
+        : analysisActionUrl(projectId, kind, id, action);
     const result = await postJson(url, action === 'modify' ? { prompt } : {});
     if (action === 'modify') modificationDrafts.delete(`${projectId}:${kind}:${id}`);
     if (data?.id !== projectId || currentRoute().id !== projectId) return;
     if (['rerun', 'modify'].includes(action)) data.job = result;
     else if (location.pathname === pathname)
-      history.replaceState(null, '', projectUrl(kind, action === 'duplicate' ? result.analysisId : ''));
+      history.replaceState(
+        null,
+        '',
+        projectUrl(kind, action === 'duplicate' ? result.analysisId : ''),
+      );
     await loadCurrentProject();
   } catch (error) {
     showError(error.message);
@@ -1657,26 +1244,31 @@ async function runAction(action) {
     if (action === 'retry') {
       const job = data.job;
       await postJson(
-        job.analysisId ? analysisActionUrl(projectId,
-          job.kind === 'flow' ? 'flows' : job.kind === 'sequence' ? 'sequences' : job.kind,
-          job.analysisId, job.modificationPrompt ? 'modify' : 'rerun') : projectApiUrl(
-          job.kind === 'sequence'
-            ? 'sequences'
-            : job.kind === 'flow'
-              ? 'flows'
-              : ['architecture', 'nouns', 'directories'].includes(job.kind)
-                ? job.kind
-                : 'analysis',
-        ),
+        job.analysisId
+          ? analysisActionUrl(
+              projectId,
+              job.kind === 'flow' ? 'flows' : job.kind === 'sequence' ? 'sequences' : job.kind,
+              job.analysisId,
+              job.modificationPrompt ? 'modify' : 'rerun',
+            )
+          : projectApiUrl(
+              job.kind === 'sequence'
+                ? 'sequences'
+                : job.kind === 'flow'
+                  ? 'flows'
+                  : ['architecture', 'nouns', 'directories'].includes(job.kind)
+                    ? job.kind
+                    : 'analysis',
+            ),
         job.modificationPrompt
           ? { prompt: job.modificationPrompt }
           : job.kind === 'flow'
-          ? { feature: job.feature }
-          : ['architecture', 'sequence'].includes(job.kind)
-            ? { question: job.feature }
-            : job.kind === 'nouns'
-              ? { scope: job.feature || '' }
-              : {},
+            ? { feature: job.feature }
+            : ['architecture', 'sequence'].includes(job.kind)
+              ? { question: job.feature }
+              : job.kind === 'nouns'
+                ? { scope: job.feature || '' }
+                : {},
       );
     } else {
       const result = await postJson(projectApiUrl(action));
@@ -1711,7 +1303,11 @@ async function deleteCurrentProject(id) {
       ++sourceRequest;
       for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close('no');
       data = undefined;
-      history.replaceState(null, '', projects.length ? projectUrl('directories', '', projects[0].id) : '/');
+      history.replaceState(
+        null,
+        '',
+        projects.length ? projectUrl('directories', '', projects[0].id) : '/',
+      );
       try {
         localStorage.removeItem('codescope-project');
       } catch {
@@ -1758,12 +1354,17 @@ function renderEmptyWorkspace() {
     selectElement(`#tab-${tab}`).classList.remove('active');
     selectElement(`#tab-${tab}`).removeAttribute('aria-current');
   }
-  for (const counter of ['flow-count', 'architecture-count', 'nouns-count', 'sequences-count', 'all-count'])
+  for (const counter of [
+    'flow-count',
+    'architecture-count',
+    'nouns-count',
+    'sequences-count',
+    'all-count',
+  ])
     selectElement(`#${counter}`).textContent = '0';
   for (const button of ['project-info', 'rename-project', 'delete-project'])
     selectElement(`#${button}`).disabled = true;
-  selectElement('#view').innerHTML =
-    '<article class="empty-analysis"><h2>Understand a local project</h2><p>Add a repository or directory to explore its structure, architecture, and code flows.</p><button class="button primary" data-action="add">+ Add project</button></article>';
+  selectElement('#view').innerHTML = renderEmptyProjectWorkspace();
 }
 
 // Show the current project's directory and stack without crowding its page header.
@@ -1892,7 +1493,9 @@ async function initializeApp() {
           // Find the browser's previously selected project if it still exists.
           (project) => project.id === saved,
         )?.id || projects[0].id;
-      const oldHash = location.hash.match(/^#(flows|directories|architecture|nouns|sequences|code-scan|all)(?:\/(.*))?$/);
+      const oldHash = location.hash.match(
+        /^#(flows|directories|architecture|nouns|sequences|code-scan|all)(?:\/(.*))?$/,
+      );
       const current = currentRoute();
       history.replaceState(
         null,
@@ -1931,28 +1534,32 @@ async function openSource(path, line = 1, symbol = '', endLine = line) {
   selectElement('#source-context').textContent = symbol
     ? `${sourceLabel} · line ${targetLine} · Current local source`
     : 'Current local source · Read-only preview';
-  selectElement('#source-body').innerHTML = '<div class="loading">Loading source…</div>';
+  selectElement('#source-body').innerHTML = /* HTML */ `
+    <div class="loading">Loading source…</div>
+  `;
   if (!dialog.open) dialog.showModal();
 
   try {
     const result = await fetchJson(`${projectApiUrl('source')}?path=${encodeURIComponent(path)}`);
     if (requestId !== sourceRequest || !dialog.open) return;
     const lines = result.content.split('\n');
-    selectElement('#source-body').innerHTML = `<pre class="source-code"><code>${lines
-      .map(
-        // Render escaped source lines and highlight the requested citation line.
-        (text, index) =>
-          `<span class="source-line ${index + 1 >= targetLine && index + 1 <= finalLine ? 'highlight' : ''}" id="source-line-${index + 1}"><span class="line-number">${index + 1}</span><span class="line-text">${escape(text) || ' '}</span></span>`,
-      )
-      .join('')}</code></pre>`;
+    selectElement('#source-body').innerHTML = renderSourcePreview(lines, targetLine, finalLine);
     selectElement(`#source-line-${Math.min(targetLine, lines.length)}`)?.scrollIntoView({
       block: 'center',
     });
   } catch (error) {
     if (requestId === sourceRequest)
-      selectElement('#source-body').innerHTML =
-        `<div class="source-error">${escape(error.message)}</div>`;
+      selectElement('#source-body').innerHTML = /* HTML */ `
+        <div class="source-error">${escape(error.message)}</div>
+      `;
   }
+}
+
+// Recognize internal project views using the same tabs as route parsing.
+function isProjectViewUrl(pathname) {
+  const match = pathname.match(/^\/projects\/[a-zA-Z0-9_-]+\/([^/]+)(?:\/|$)/);
+
+  return Boolean(match && projectTabs.includes(match[1]));
 }
 
 // Handle internal navigation, project actions, source links, and tree expansion.
@@ -1961,8 +1568,11 @@ document.addEventListener('click', (event) => {
   if (menuAction) {
     if (menuAction.disabled) return;
     menuAction.closest('details').open = false;
-    runAnalysisAction(menuAction.dataset.analysisAction,
-      menuAction.dataset.analysisKind, menuAction.dataset.analysisId);
+    runAnalysisAction(
+      menuAction.dataset.analysisAction,
+      menuAction.dataset.analysisKind,
+      menuAction.dataset.analysisId,
+    );
 
     return;
   }
@@ -2001,10 +1611,7 @@ document.addEventListener('click', (event) => {
     !link.hasAttribute('download')
   ) {
     const url = new URL(link.href, location.href);
-    if (
-      url.origin === location.origin &&
-      /^\/projects\/[a-zA-Z0-9_-]+\/(flows|directories|architecture|nouns|sequences|code-scan|all)(\/|$)/.test(url.pathname)
-    ) {
+    if (url.origin === location.origin && isProjectViewUrl(url.pathname)) {
       event.preventDefault();
       navigate(url.pathname);
 
@@ -2047,8 +1654,14 @@ document.addEventListener('click', (event) => {
         // Retain the selected directory while updating expanded tree nodes.
         (entry) => entry.path === currentRoute().selection,
       )?.path || '';
-    selectElement('#tree-container').innerHTML =
-      `<ul class="tree">${renderTree(data.tree, selected)}</ul>`;
+    selectElement('#tree-container').innerHTML = renderDirectorySearchResults(
+      renderDirectoryTree(data.tree, selected, {
+        expanded,
+        query,
+        projectName: data.name,
+        directoryUrl,
+      }),
+    );
   }
 });
 
@@ -2081,8 +1694,13 @@ selectElement('#job-prompts-dialog').addEventListener('click', (event) => {
   const dialog = event.currentTarget;
   if (event.target !== dialog) return;
   const bounds = dialog.getBoundingClientRect();
-  if (event.clientX < bounds.left || event.clientX > bounds.right ||
-      event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+  if (
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  )
+    dialog.close();
 });
 
 // Close the analysis comparison and return focus to its trigger.
@@ -2096,9 +1714,12 @@ selectElement('#analysis-changes-dialog').addEventListener('click', (event) => {
   if (event.target !== dialog) return;
   const bounds = dialog.getBoundingClientRect();
   if (
-    event.clientX < bounds.left || event.clientX > bounds.right ||
-    event.clientY < bounds.top || event.clientY > bounds.bottom
-  ) dialog.close();
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  )
+    dialog.close();
 });
 
 // Close the source preview from its close button.
@@ -2118,7 +1739,9 @@ selectElement('#close-noun-details').addEventListener('click', () =>
 selectElement('#noun-details-dialog').addEventListener('close', (event) => {
   const dialog = event.currentTarget;
   if (dialog.dataset.route !== location.pathname) return;
-  selectElement(`[data-noun="${CSS.escape(dialog.dataset.nounId)}"]`)?.focus({ preventScroll: true });
+  selectElement(`[data-noun="${CSS.escape(dialog.dataset.nounId)}"]`)?.focus({
+    preventScroll: true,
+  });
 });
 
 // Dismiss concept details only when the pointer is outside the dialog's bounds.
@@ -2126,8 +1749,13 @@ selectElement('#noun-details-dialog').addEventListener('click', (event) => {
   const dialog = event.currentTarget;
   if (event.target !== dialog) return;
   const bounds = dialog.getBoundingClientRect();
-  if (event.clientX < bounds.left || event.clientX > bounds.right ||
-      event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+  if (
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  )
+    dialog.close();
 });
 
 // Dismiss the modification prompt without submitting a job.
@@ -2156,7 +1784,9 @@ selectElement('#close-sequence-details').addEventListener('click', () =>
 );
 
 // Show the preceding message without closing the sequence details modal.
-selectElement('#sequence-message-previous').addEventListener('click', () => stepSequenceMessage(-1));
+selectElement('#sequence-message-previous').addEventListener('click', () =>
+  stepSequenceMessage(-1),
+);
 
 // Show the following message without closing the sequence details modal.
 selectElement('#sequence-message-next').addEventListener('click', () => stepSequenceMessage(1));
@@ -2166,9 +1796,12 @@ selectElement('#sequence-details-dialog').addEventListener('click', (event) => {
   if (event.target !== event.currentTarget) return;
   const bounds = event.currentTarget.getBoundingClientRect();
   if (
-    event.clientX < bounds.left || event.clientX > bounds.right ||
-    event.clientY < bounds.top || event.clientY > bounds.bottom
-  ) event.currentTarget.close();
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  )
+    event.currentTarget.close();
 });
 
 // Delete the component selected in the architecture details dialog.
@@ -2236,8 +1869,13 @@ selectElement('#project-info-dialog').addEventListener('click', (event) => {
   const dialog = event.currentTarget;
   if (event.target !== dialog) return;
   const bounds = dialog.getBoundingClientRect();
-  if (event.clientX < bounds.left || event.clientX > bounds.right ||
-      event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+  if (
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  )
+    dialog.close();
 });
 
 // Open the rename dialog beside the other project actions.
@@ -2265,7 +1903,8 @@ selectElement('#rename-project-dialog').addEventListener('click', (event) => {
     event.clientX > bounds.right ||
     event.clientY < bounds.top ||
     event.clientY > bounds.bottom
-  ) event.currentTarget.close();
+  )
+    event.currentTarget.close();
 });
 
 selectElement('#add-project').addEventListener('click', showAddProject);
@@ -2326,10 +1965,9 @@ document.addEventListener('submit', async (event) => {
   event.target.querySelector('button').disabled = true;
 
   try {
-    const job = await postJson(
-      `/api/projects/${projectId}/${form.action}`,
-      { [form.field]: feature },
-    );
+    const job = await postJson(`/api/projects/${projectId}/${form.action}`, {
+      [form.field]: feature,
+    });
     form.drafts.delete(projectId);
     if (data?.id === projectId) {
       data.job = job;
