@@ -88,7 +88,7 @@ export function renderJobProgress(job, {
             job.status === 'running'
               ? ''
               : /* HTML */ `
-                  <span class="eyebrow">
+                  <span class="job-status">
                     ${completed ? `${renderIcon('check')} Analysis complete` : escape(job.status)}
                   </span>
                 `
@@ -115,7 +115,7 @@ export function renderJobProgress(job, {
         ${
           job.coverage?.limited
             ? /* HTML */ `
-                <small>
+                <small class="job-coverage">
                   Analysis snapshot: ${job.coverage.included} of ${job.coverage.total} text files.
                   Large files and instruction files may be omitted.
                 </small>
