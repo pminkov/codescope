@@ -1,7 +1,38 @@
-# CodeScope
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/images/logo-light.svg">
+    <img src="docs/images/logo-dark.svg" alt="CodeScope" width="448" height="96">
+  </picture>
+</h1>
 
-Explore a codebase with directory explanations, architecture and sequence diagrams,
-code flows, REST endpoint inventories, and answers linked to source. Runs locally using the Codex CLI.
+<p align="center"><strong>Understand your codebase.</strong></p>
+
+<p align="center">
+  Explore a codebase with directory explanations, architecture and sequence diagrams,
+  code flows, REST endpoint inventories, and answers linked to source.
+  Runs locally using the Codex CLI.
+</p>
+
+<p align="center">
+  <a href="package.json">
+    <img
+      src="https://img.shields.io/badge/version-0.1.0-527a60?style=flat-square"
+      alt="Version 0.1.0"
+    >
+  </a>
+  <a href="#run">
+    <img
+      src="https://img.shields.io/badge/node-%E2%89%A522-527a60?style=flat-square"
+      alt="Node.js 22 or newer"
+    >
+  </a>
+  <a href="LICENSE">
+    <img
+      src="https://img.shields.io/badge/license-MIT-527a60?style=flat-square"
+      alt="License: MIT"
+    >
+  </a>
+</p>
 
 ## Run
 
