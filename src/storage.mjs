@@ -31,6 +31,7 @@ const createEmptyUnderstanding = () => ({
   nounAnalyses: [],
   sequences: [],
   endpointAnalyses: [],
+  presentations: [],
 });
 
 // Recognize jobs that are queued or currently running.
@@ -43,6 +44,7 @@ const analysisTypes = {
   nouns: { collection: 'nounAnalyses', stage: 'nouns', request: 'requestedScope' },
   sequences: { collection: 'sequences', stage: 'sequence', request: 'requestedQuestion' },
   endpoints: { collection: 'endpointAnalyses', stage: 'endpoints', request: null },
+  presentations: { collection: 'presentations', stage: 'presentation', request: 'requestedTopic' },
 };
 
 // Locate a saved result without treating a missing selection as a different analysis.
@@ -183,6 +185,14 @@ function mergeStageResult(understanding, result, stage, job, index, snapshot) {
       // Retrying initial analysis replaces only the first, overall diagram.
       (entry) => entry.id !== 'overview',
     )];
+  } else if (stage === 'presentation') {
+    key = randomUUID();
+    (understanding.presentations ||= []).push({
+      ...analysis,
+      id: key,
+      requestedTopic: job.feature,
+      createdAt: timestamp,
+    });
   } else if (stage === 'sequence') {
     key = randomUUID();
     (understanding.sequences ||= []).push({
@@ -398,6 +408,20 @@ export class ProjectStore {
     return projectView(project, index, understanding, project.job || null);
   }
 
+  // Export the saved deck with original citations, excluding private source baselines.
+  async presentation(id, deckId) {
+    const project = await this.get(id);
+    const understanding = await readJson(this.path(id, 'understanding.json'), {});
+    const deck = understanding.presentations?.find(
+      // Downloads always target the explicitly requested saved result.
+      (entry) => entry.id === deckId,
+    );
+    if (!deck) throw fail('Presentation not found.', 404);
+    const { baseline, coverage, ...content } = deck;
+
+    return { projectName: project.name, deck: content };
+  }
+
   // Read saved prompts and output schemas using only known stage filenames.
   async jobPrompts(id, jobId) {
     const project = await this.get(id);
@@ -407,7 +431,9 @@ export class ProjectStore {
 
     try {
       const files = await readdir(directory);
-      const stages = ['directories', 'architecture', 'flow', 'nouns', 'sequence', 'endpoints'];
+      const stages = [
+        'directories', 'architecture', 'flow', 'nouns', 'sequence', 'endpoints', 'presentation',
+      ];
       for (const stage of stages) {
         const filename = `${stage}.prompt.txt`;
         if (!files.includes(filename)) continue;
@@ -468,7 +494,8 @@ export class ProjectStore {
   // Validate and persist a new job before adding it to the worker queue.
   async enqueue(id, kind = 'initial', feature) {
     const project = await this.get(id);
-    if (!['initial', 'directories', 'flow', 'architecture', 'nouns', 'sequence', 'endpoints']
+    if (!['initial', 'directories', 'flow', 'architecture', 'nouns', 'sequence', 'endpoints',
+      'presentation']
       .includes(kind))
       throw fail('Unknown analysis job kind.');
     if (this.edits.has(id)) throw fail('A diagram edit is being saved. Try again shortly.', 409);
@@ -498,6 +525,9 @@ export class ProjectStore {
       throw fail(`Describe the ${kind} scope in 4,000 characters or fewer, or leave it blank.`);
     if (kind === 'endpoints' && feature !== undefined)
       throw fail('Endpoints discovery covers the entire project and does not accept a scope.');
+    if (kind === 'presentation' &&
+      (typeof feature !== 'string' || !feature.trim() || feature.length > 4000))
+      throw fail('Enter a presentation topic in 1–4,000 characters.');
     return this.queueAnalysisJob(project, kind, feature);
   }
 
@@ -507,7 +537,7 @@ export class ProjectStore {
     const job = {
       id: randomUUID(),
       kind,
-      feature: ['flow', 'architecture', 'nouns', 'sequence'].includes(kind)
+      feature: ['flow', 'architecture', 'nouns', 'sequence', 'presentation'].includes(kind)
         ? feature?.trim() || null : null,
       status: 'queued',
       stage: 'queued',
@@ -686,7 +716,7 @@ export class ProjectStore {
         index,
         directory,
         signal,
-        ['nouns', 'sequence'].includes(job.kind) ? job.feature || '' : '',
+        ['nouns', 'sequence', 'presentation'].includes(job.kind) ? job.feature || '' : '',
       );
       await this.updateJob(job, { coverage: snapshot.coverage });
       await this.runAnalysisStages(project, job, index, snapshot, directory, signal);
@@ -723,6 +753,7 @@ export class ProjectStore {
       {
         directories: ['directories'], flow: ['flow'], architecture: ['architecture'],
         nouns: ['nouns'], sequence: ['sequence'], endpoints: ['endpoints'],
+        presentation: ['presentation'],
       }[job.kind] ||
       ['directories', 'architecture'];
     let understanding = await readJson(
@@ -737,19 +768,21 @@ export class ProjectStore {
         message:
           job.modificationPrompt
             ? 'Modifying the selected analysis…'
-            : stage === 'directories'
-              ? 'Analyzing directory responsibilities…'
-              : stage === 'architecture'
-                ? job.feature
-                  ? 'Diagramming the requested architecture…'
-                  : 'Building the system architecture…'
-                : stage === 'sequence'
-                  ? 'Tracing interactions for the sequence diagram…'
-                  : stage === 'nouns'
-                    ? 'Identifying nouns and their relationships…'
-                    : stage === 'endpoints'
-                      ? 'Finding servers and REST endpoints…'
-                      : 'Tracing the requested code flow…',
+            : stage === 'presentation'
+              ? 'Creating slides and custom diagrams for your topic…'
+              : stage === 'directories'
+                ? 'Analyzing directory responsibilities…'
+                : stage === 'architecture'
+                  ? job.feature
+                    ? 'Diagramming the requested architecture…'
+                    : 'Building the system architecture…'
+                  : stage === 'sequence'
+                    ? 'Tracing interactions for the sequence diagram…'
+                    : stage === 'nouns'
+                      ? 'Identifying nouns and their relationships…'
+                      : stage === 'endpoints'
+                        ? 'Finding servers and REST endpoints…'
+                        : 'Tracing the requested code flow…',
       });
       let lastProgress = 0;
       const result = await analyzeStage({

@@ -11,6 +11,11 @@ import { renderFlowsView } from './views/flows.js';
 import { renderNounsView, renderNounDetails } from './views/nouns.js';
 import { renderEndpointsView } from './views/endpoints.js';
 import { renderSequencesView, renderSequenceDetails } from './views/sequences.js';
+import {
+  renderPresentationsView,
+  renderPresentationSlide,
+  renderPresentationNotes,
+} from './views/presentations.js';
 import { renderArchitectureView, renderNodeDetails } from './views/architecture.js';
 import { renderAllAnalysesView } from './views/all-analyses.js';
 import { renderJobProgress } from './views/job-progress.js';
@@ -63,6 +68,8 @@ const flowDrafts = new Map();
 const architectureDrafts = new Map();
 const nounsDrafts = new Map();
 const sequenceDrafts = new Map();
+const presentationDrafts = new Map();
+const presentationSlides = new Map();
 const modificationDrafts = new Map();
 const projectTabs = [
   'directories',
@@ -72,6 +79,7 @@ const projectTabs = [
   'nouns',
   'sequences',
   'endpoints',
+  'presentations',
   'all',
 ];
 const analysisForms = {
@@ -79,6 +87,7 @@ const analysisForms = {
   'architecture-form': { action: 'architecture', field: 'question', drafts: architectureDrafts },
   'sequence-form': { action: 'sequences', field: 'question', drafts: sequenceDrafts },
   'nouns-form': { action: 'nouns', field: 'scope', drafts: nounsDrafts },
+  'presentation-form': { action: 'presentations', field: 'topic', drafts: presentationDrafts },
 };
 const jobTypeLabels = {
   initial: 'Directories + architecture',
@@ -88,7 +97,9 @@ const jobTypeLabels = {
   nouns: 'Nouns',
   sequence: 'Sequence diagram',
   endpoints: 'Endpoints',
+  presentation: 'Presentation',
 };
+const jobTabs = { flow: 'flows', sequence: 'sequences', presentation: 'presentations' };
 const dialogStack = setupDialogStack();
 
 // Describe the actual selected result, including the UI's default selections.
@@ -100,6 +111,7 @@ function currentAskContext() {
   else if (tab === 'nouns') selected = getSelectedNounsAnalysis();
   else if (tab === 'endpoints') selected = getSelectedEndpointsAnalysis();
   else if (tab === 'sequences') selected = getSelectedSequence();
+  else if (tab === 'presentations') selected = getSelectedPresentation();
   else if (tab === 'flows')
     selected =
       data.flows.find(
@@ -126,6 +138,7 @@ function currentAskContext() {
     nouns: 'Nouns',
     sequences: 'Sequences',
     endpoints: 'Endpoints',
+    presentations: 'Presentation',
     all: 'All analyses',
   };
   const detailDialog = dialogStack.latestDialog();
@@ -222,10 +235,11 @@ selectElement('#theme-toggle').addEventListener('click', () =>
 function getSelectedAnalysisReview() {
   const { tab, selection } = currentRoute();
   if (tab === 'architecture') return getSelectedArchitecture();
-  if (['flows', 'nouns', 'sequences', 'endpoints'].includes(tab)) {
+  if (['flows', 'nouns', 'sequences', 'endpoints', 'presentations'].includes(tab)) {
     const analyses = ({
       flows: data.flows, nouns: data.nounAnalyses, sequences: data.sequences,
       endpoints: data.endpointAnalyses,
+      presentations: data.presentations,
     })[tab] || [];
     return (
       analyses.find(
@@ -286,6 +300,80 @@ function renderDirectories() {
     });
     selectElement('#tree-container').innerHTML = renderDirectorySearchResults(tree);
   });
+}
+
+// Resolve a saved deck using the same default as its navigation and Ask context.
+function getSelectedPresentation() {
+  const decks = data?.presentations || [];
+  return decks.find(
+    // Stable IDs preserve independent presentations across reloads and browser history.
+    (deck) => deck.id === currentRoute().selection,
+  ) || decks[0];
+}
+
+// Restore slide position per deck while accommodating shorter regenerated presentations.
+function selectedPresentationIndex(deck) {
+  return Math.min(presentationSlides.get(`${data.id}:${deck.id}`) || 0, deck.slides.length - 1);
+}
+
+// Render a topic composer and the selected presentation's current HTML slide.
+function renderPresentations() {
+  const deck = getSelectedPresentation();
+  selectElement('#view').innerHTML = renderPresentationsView(data, deck, {
+    draft: presentationDrafts.get(data.id) || '',
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+    slideIndex: deck ? selectedPresentationIndex(deck) : 0,
+  });
+}
+
+// Change only the slide and its supporting UI so fullscreen survives navigation.
+function changePresentationSlide(index) {
+  const deck = getSelectedPresentation();
+  if (!deck || !Number.isInteger(index)) return;
+  const position = Math.max(0, Math.min(index, deck.slides.length - 1));
+  presentationSlides.set(`${data.id}:${deck.id}`, position);
+  selectElement('#presentation-slide').innerHTML = renderPresentationSlide(
+    deck.slides[position], position, deck.slides.length, data.name,
+  );
+  selectElement('.presentation-notes').innerHTML = renderPresentationNotes(deck.slides[position]);
+  selectElement('[data-slide-position]').textContent =
+    `Slide ${position + 1} of ${deck.slides.length}`;
+  selectElement('[data-presentation-action="previous"]').disabled = position === 0;
+  selectElement('[data-presentation-action="next"]').disabled = position === deck.slides.length - 1;
+  // Keep the outline's accessible selection in sync without moving the page scroll position.
+  document.querySelectorAll('[data-presentation-slide]').forEach((button) => {
+    if (Number(button.dataset.presentationSlide) === position)
+      button.setAttribute('aria-current', 'step');
+    else button.removeAttribute('aria-current');
+  });
+  selectElement('.presentation-stage').focus({ preventScroll: true });
+}
+
+// Enter native fullscreen when supported, retaining a usable in-page fallback.
+async function runPresentationAction(action) {
+  const deck = getSelectedPresentation();
+  const stage = selectElement('.presentation-stage');
+  if (!deck || !stage) return;
+  const index = selectedPresentationIndex(deck);
+  if (action === 'previous' || action === 'next') {
+    changePresentationSlide(index + (action === 'next' ? 1 : -1));
+    return;
+  }
+  if (action === 'exit') {
+    stage.classList.remove('is-presenting');
+    if (document.fullscreenElement === stage) await document.exitFullscreen();
+    stage.focus({ preventScroll: true });
+    return;
+  }
+  if (action !== 'present') return;
+  try {
+    if (!stage.requestFullscreen) throw new Error('Fullscreen unavailable.');
+    await stage.requestFullscreen();
+  } catch {
+    stage.classList.add('is-presenting');
+  }
+  stage.focus({ preventScroll: true });
 }
 
 // Render the selected flow and attach expansion tracking to its steps.
@@ -738,6 +826,7 @@ function render() {
   else if (tab === 'nouns') renderNouns();
   else if (tab === 'endpoints') renderEndpoints();
   else if (tab === 'sequences') renderSequences();
+  else if (tab === 'presentations') renderPresentations();
   else if (tab === 'code-scan') {
     selectElement('#view').innerHTML = renderCodeScan(
       data.codeScan,
@@ -986,6 +1075,7 @@ function updateHeader() {
   selectElement('#architecture-count').textContent = getArchitectureViews().length;
   selectElement('#nouns-count').textContent = (data.nounAnalyses || []).length;
   selectElement('#sequences-count').textContent = (data.sequences || []).length;
+  selectElement('#presentations-count').textContent = (data.presentations || []).length;
   selectElement('#all-count').textContent = getAnalysisEntries(data).length;
   selectElement('#project-actions').hidden = false;
   selectElement('#project-info').disabled = deletingProject;
@@ -1084,15 +1174,15 @@ async function loadCurrentProject({ quiet = false } = {}) {
       previous.job?.id === next.job?.id &&
       ['queued', 'running'].includes(previous.job?.status) &&
       next.job?.status === 'completed' &&
-      ['architecture', 'nouns', 'sequence'].includes(next.job.kind) &&
+      ['architecture', 'nouns', 'sequence', 'presentation'].includes(next.job.kind) &&
       next.job.resultId &&
       !next.job.analysisId &&
-      currentRoute().tab === (next.job.kind === 'sequence' ? 'sequences' : next.job.kind)
+      currentRoute().tab === (jobTabs[next.job.kind] || next.job.kind)
     )
       history.replaceState(
         null,
         '',
-        projectUrl(next.job.kind === 'sequence' ? 'sequences' : next.job.kind, next.job.resultId),
+        projectUrl(jobTabs[next.job.kind] || next.job.kind, next.job.resultId),
       );
     if (!quiet || changed) render();
     if (['queued', 'running'].includes(data.job?.status))
@@ -1122,7 +1212,7 @@ function confirmProjectDeletion() {
   selectElement('#action-title').textContent = 'Delete project?';
   selectElement('#action-description').textContent =
     `Delete “${data.name}” from CodeScope? This removes its saved explanations, diagrams, ` +
-    'flows, Nouns and Endpoints analyses, sequence analyses, and debugging job history. ' +
+    'flows, noun and endpoint analyses, sequences, presentations, and debugging job history. ' +
     'This cannot be undone.';
   selectElement('#action-usage').textContent =
     'Any queued or running analysis for this project will be stopped.';
@@ -1151,6 +1241,7 @@ function analysisTitle(kind, id) {
     nouns: data.nounAnalyses,
     sequences: data.sequences,
     endpoints: data.endpointAnalyses,
+    presentations: data.presentations,
   };
 
   return (
@@ -1285,12 +1376,12 @@ async function runAction(action) {
         job.analysisId
           ? analysisActionUrl(
               projectId,
-              job.kind === 'flow' ? 'flows' : job.kind === 'sequence' ? 'sequences' : job.kind,
+              jobTabs[job.kind] || job.kind,
               job.analysisId,
               job.modificationPrompt ? 'modify' : 'rerun',
             )
           : projectApiUrl(
-              job.kind === 'sequence'
+              job.kind === 'presentation' ? 'presentations' : job.kind === 'sequence'
                 ? 'sequences'
                 : job.kind === 'flow'
                   ? 'flows'
@@ -1300,7 +1391,7 @@ async function runAction(action) {
             ),
         job.modificationPrompt
           ? { prompt: job.modificationPrompt }
-          : job.kind === 'flow'
+          : job.kind === 'presentation' ? { topic: job.feature } : job.kind === 'flow'
             ? { feature: job.feature }
             : ['architecture', 'sequence'].includes(job.kind)
               ? { question: job.feature }
@@ -1337,6 +1428,7 @@ async function deleteCurrentProject(id) {
     architectureDrafts.delete(id);
     nounsDrafts.delete(id);
     sequenceDrafts.delete(id);
+    presentationDrafts.delete(id);
     await loadProjects();
     if (currentRoute().id === id) {
       ++sourceRequest;
@@ -1398,6 +1490,7 @@ function renderEmptyWorkspace() {
     'architecture-count',
     'nouns-count',
     'sequences-count',
+    'presentations-count',
     'all-count',
   ])
     selectElement(`#${counter}`).textContent = '0';
@@ -1533,7 +1626,7 @@ async function initializeApp() {
           (project) => project.id === saved,
         )?.id || projects[0].id;
       const oldHash = location.hash.match(
-        /^#(flows|directories|architecture|nouns|sequences|endpoints|code-scan|all)(?:\/(.*))?$/,
+        new RegExp(`^#(${projectTabs.join('|')})(?:/(.*))?$`),
       );
       const current = currentRoute();
       history.replaceState(
@@ -1603,6 +1696,19 @@ function isProjectViewUrl(pathname) {
 
 // Handle internal navigation, project actions, source links, and tree expansion.
 document.addEventListener('click', (event) => {
+  const slideButton = event.target.closest('[data-presentation-slide]');
+  if (slideButton) {
+    changePresentationSlide(Number(slideButton.dataset.presentationSlide));
+    return;
+  }
+  const presentationAction = event.target.closest('[data-presentation-action]');
+  if (presentationAction) {
+    runPresentationAction(presentationAction.dataset.presentationAction).catch(
+      // Surface fullscreen errors without interrupting ordinary slide navigation.
+      (error) => showError(error.message),
+    );
+    return;
+  }
   const menuAction = event.target.closest('[data-analysis-action]');
   if (menuAction) {
     if (menuAction.disabled) return;
@@ -1994,6 +2100,8 @@ document.addEventListener('input', (event) => {
     architectureDrafts.set(data.id, event.target.value);
   if (event.target.id === 'sequence-question') sequenceDrafts.set(data.id, event.target.value);
   if (event.target.id === 'nouns-scope') nounsDrafts.set(data.id, event.target.value);
+  if (event.target.id === 'presentation-topic')
+    presentationDrafts.set(data.id, event.target.value);
 });
 // Submit an independent analysis request and display validation failures.
 document.addEventListener('submit', async (event) => {
@@ -2025,6 +2133,33 @@ document.addEventListener('submit', async (event) => {
 window.addEventListener('popstate', () => {
   loadCurrentProject();
 });
+
+// Navigate slides only when a presentation is visible and no text field or dialog owns input.
+document.addEventListener('keydown', (event) => {
+  if (currentRoute().tab !== 'presentations' || !selectElement('.presentation-stage') ||
+    event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+    event.target.closest('input, textarea, select, [contenteditable="true"], dialog') ||
+    document.querySelector('dialog[open]') || !selectElement('#ask-panel').hidden) return;
+  const deck = getSelectedPresentation();
+  const index = selectedPresentationIndex(deck);
+  const positions = {
+    ArrowLeft: index - 1, PageUp: index - 1,
+    ArrowRight: index + 1, PageDown: index + 1,
+    Home: 0, End: deck.slides.length - 1,
+  };
+  if (Object.hasOwn(positions, event.key)) {
+    event.preventDefault();
+    changePresentationSlide(positions[event.key]);
+  } else if (event.key.toLowerCase() === 'f' || event.key === 'Escape') {
+    event.preventDefault();
+    const action = event.key === 'Escape' ? 'exit' : 'present';
+    runPresentationAction(action).catch(
+      // Treat native fullscreen rejections as a visible control error.
+      (error) => showError(error.message),
+    );
+  }
+});
+
 // Focus directory search on the slash shortcut when no dialog or text input is active.
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {

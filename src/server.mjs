@@ -7,6 +7,7 @@ import { readSource, fail } from './analysis.mjs';
 import { codexStatus } from './runner.mjs';
 import { createDirectoryPicker } from './native-dialog.mjs';
 import { AskService } from './ask.mjs';
+import { renderPresentationDocument } from '../public/views/presentations.js';
 
 const assets = {
   '/': ['index.html', 'text/html'],
@@ -29,6 +30,9 @@ const assets = {
   '/views/nouns.js': ['views/nouns.js', 'text/javascript'],
   '/views/endpoints.js': ['views/endpoints.js', 'text/javascript'],
   '/views/sequences.js': ['views/sequences.js', 'text/javascript'],
+  '/views/presentations.js': ['views/presentations.js', 'text/javascript'],
+  '/ui/presentation-diagram.js': ['ui/presentation-diagram.js', 'text/javascript'],
+  '/presentation.css': ['presentation.css', 'text/css'],
   '/views/all-analyses.js': ['views/all-analyses.js', 'text/javascript'],
   '/views/job-progress.js': ['views/job-progress.js', 'text/javascript'],
   '/views/workspace.js': ['views/workspace.js', 'text/javascript'],
@@ -36,7 +40,7 @@ const assets = {
 };
 const pageRoute = new RegExp(
   '^/(?:projects/[a-zA-Z0-9_-]+/)?' +
-  '(?:flows|directories|architecture|nouns|sequences|endpoints|code-scan|all)(?:/|$)',
+  '(?:flows|directories|architecture|nouns|sequences|endpoints|presentations|code-scan|all)(?:/|$)',
 );
 
 // Read a bounded JSON object from a mutation request.
@@ -116,7 +120,7 @@ async function handleProjectRequest(request, url, match, store, json) {
   }
 
   if (['analysis', 'directories', 'flows', 'architecture', 'nouns', 'sequences', 'endpoints',
-    'cancel'].includes(action)) {
+    'presentations', 'cancel'].includes(action)) {
     if (request.method !== 'POST') throw fail('Use POST for this action.', 405);
     const body = await readJsonBody(request);
     if (action === 'cancel') return json(await store.cancel(id));
@@ -124,14 +128,15 @@ async function handleProjectRequest(request, url, match, store, json) {
     return json(
       await store.enqueue(
         id,
-        action === 'sequences'
+        action === 'presentations' ? 'presentation' : action === 'sequences'
           ? 'sequence'
           : action === 'flows'
             ? 'flow'
             : ['architecture', 'nouns', 'endpoints', 'directories'].includes(action)
               ? action
               : 'initial',
-        ['nouns', 'endpoints'].includes(action) ? body.scope
+        action === 'presentations' ? body.topic
+          : ['nouns', 'endpoints'].includes(action) ? body.scope
           : ['architecture', 'sequences'].includes(action) ? body.question : body.feature,
       ),
       202,
@@ -209,7 +214,7 @@ export function createApp({
         const analysisAction = url.pathname.match(
           new RegExp(
             '^/api/projects/([a-zA-Z0-9_-]+)/analyses/' +
-            '(directories|architecture|flows|nouns|sequences|endpoints)/' +
+            '(directories|architecture|flows|nouns|sequences|endpoints|presentations)/' +
             '([a-zA-Z0-9_-]+)/(rerun|modify|duplicate|delete)$',
           ),
         );
@@ -219,6 +224,24 @@ export function createApp({
 
           return json(await store.changeAnalysis(...analysisAction.slice(1), body.prompt),
             ['rerun', 'modify'].includes(analysisAction[4]) ? 202 : 200);
+        }
+
+        const presentationExport = url.pathname.match(
+          /^\/api\/projects\/([a-zA-Z0-9_-]+)\/presentations\/([a-zA-Z0-9_-]+)\/export$/,
+        );
+        if (presentationExport) {
+          if (request.method === 'POST') throw fail('Use GET to download a presentation.', 405);
+          const format = url.searchParams.get('format');
+          if (!['html', 'json'].includes(format)) throw fail('Choose HTML or JSON export.');
+          const { projectName, deck } = await store.presentation(...presentationExport.slice(1));
+          const filename = `presentation-${presentationExport[2]}.${format}`;
+          response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+          if (format === 'json') return send(200, JSON.stringify(deck, null, 2));
+          const css = await readFile(
+            new URL('../public/presentation.css', import.meta.url), 'utf8',
+          );
+
+          return send(200, renderPresentationDocument(deck, projectName, css), 'text/html');
         }
 
         // Delete individual nodes in a diagram.
@@ -235,7 +258,7 @@ export function createApp({
         const match = url.pathname.match(
           new RegExp(
             '^/api/projects/([a-zA-Z0-9_-]+)(?:/' +
-            '(source|analysis|directories|flows|architecture|nouns|sequences|endpoints|' +
+            '(source|analysis|directories|flows|architecture|nouns|sequences|endpoints|presentations|' +
             'cancel|delete|rename))?$',
           ),
         );

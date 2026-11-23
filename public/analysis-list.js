@@ -21,6 +21,7 @@ export function getAnalysisEntries(project) {
     ['flows', 'flows', 'Code flow', 'flow'],
     ['nounAnalyses', 'nouns', 'Nouns', 'nouns'],
     ['sequences', 'sequences', 'Sequence diagram', 'sequences'],
+    ['presentations', 'presentations', 'Presentation', 'presentation'],
   ]) {
     for (const analysis of project[collection] || []) {
       entries.push({

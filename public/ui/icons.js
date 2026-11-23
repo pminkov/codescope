@@ -1,4 +1,7 @@
 const icons = {
+  presentation: /* HTML */ `
+    <path d="M3 3h18v13H3zM12 16v5m-5 0 5-5 5 5M7 7h10M7 11h6" />
+  `,
   endpoints: /* HTML */ `
     <rect x="3" y="3" width="18" height="7" rx="2" />
     <rect x="3" y="14" width="18" height="7" rx="2" />

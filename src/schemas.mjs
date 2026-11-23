@@ -76,6 +76,38 @@ export function stackLabels(value) {
 }
 
 export const schemas = {
+  presentation: objectSchema({
+    nextPrompts,
+    formatVersion: { type: 'integer', enum: [1] },
+    title: { ...text, maxLength: 100 },
+    description: { ...text, maxLength: 500 },
+    slides: { ...arraySchema(objectSchema({
+      id: { ...text, pattern: '^[a-zA-Z0-9_-]+$', maxLength: 80 },
+      layout: { type: 'string', enum: ['title', 'content', 'diagram'] },
+      title: { ...text, maxLength: 80 },
+      subtitle: { ...string, maxLength: 200 },
+      bullets: arraySchema({ ...text, maxLength: 160 }, 4),
+      notes: { ...string, maxLength: 1600 },
+      sources: { ...arraySchema(source, 8), minItems: 1 },
+      diagram: nullableSchema(objectSchema({
+        type: { type: 'string', enum: ['system-map', 'request-journey', 'module-detail'] },
+        title: { ...text, maxLength: 80 },
+        nodes: { ...arraySchema(objectSchema({
+          id: { ...text, pattern: '^[a-zA-Z0-9_-]+$', maxLength: 80 },
+          title: { ...text, maxLength: 36 },
+          description: { ...string, maxLength: 90 },
+          group: { ...string, maxLength: 24 },
+          layer: { type: 'integer', minimum: 0, maximum: 2 },
+        }), 6), minItems: 1 },
+        edges: arraySchema(objectSchema({
+          from: text,
+          to: text,
+          label: { ...string, maxLength: 32 },
+          inferred: { type: 'boolean' },
+        }), 8),
+      })),
+    }), 14), minItems: 3 },
+  }),
   endpoints: objectSchema({
     nextPrompts,
     title: { ...text, maxLength: 120 },

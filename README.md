@@ -19,6 +19,17 @@ npm start
 Open [127.0.0.1:4310](http://127.0.0.1:4310), choose **Add project**, and select
 or paste a folder path.
 
+Use the **Presentation** tab to enter a topic about the selected codebase and create
+a source-linked slide deck. Decks include speaker notes and custom system maps,
+request journeys, or module detail diagrams when useful. Navigate with the arrow
+keys, use **Present** (or **F**) for fullscreen, and press **Escape** to exit.
+
+Presentations are saved as versioned JSON alongside other analyses. Download JSON
+to retain the structured content, or download a standalone HTML deck with embedded
+SVG diagrams that works offline. HTML downloads include slide navigation, notes,
+and source references; browser printing produces one page per slide. The Actions
+menu supports rerunning, modifying, duplicating, and deleting saved decks.
+
 ## Configuration
 
 Set environment variables when starting the server:

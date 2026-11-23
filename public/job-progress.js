@@ -16,6 +16,7 @@ export function getJobAnalysisTargets(project) {
     flow: ['flows', 'flows'],
     nouns: ['nounAnalyses', 'nouns'],
     sequence: ['sequences', 'sequences'],
+    presentation: ['presentations', 'presentations'],
   };
   const target = kinds[job.kind];
   if (!target) return targets;

@@ -5,6 +5,7 @@ import { resolve, dirname, basename } from 'node:path';
 import { flattenTree, readSource, fingerprint } from './analysis.mjs';
 import { schemas, validateSchema } from './schemas.mjs';
 import { normalizeAnalysis } from './citations.mjs';
+import { validatePresentation } from './presentation.mjs';
 
 const exec = promisify(execFile);
 export const defaultCodex = process.env.CODESCOPE_CODEX_BIN || 'codex';
@@ -133,6 +134,7 @@ function analysisHistory(understanding) {
     flows: understanding.flows || [],
     sequences: understanding.sequences || [],
     endpoints: (understanding.endpointAnalyses || []).slice(-1),
+    presentations: understanding.presentations || [],
   };
 
   return Object.fromEntries(Object.entries(groups).map(
@@ -142,7 +144,7 @@ function analysisHistory(understanding) {
       (analysis) => ({
         title: String(analysis.title || '').slice(0, 160),
         request: String(analysis.requestedQuestion ?? analysis.requestedScope ??
-          analysis.requestedFeature ?? 'Entire project').slice(0, 600),
+          analysis.requestedFeature ?? analysis.requestedTopic ?? 'Entire project').slice(0, 600),
       }),
     )],
   ));
@@ -151,6 +153,27 @@ function analysisHistory(understanding) {
 // Describe the requested analysis, source evidence, and next questions to suggest.
 export function analysisPrompt(stage, project, index, snapshot, feature, understanding = {}, revision) {
   const purpose = {
+    presentation: [
+      `Create a presentation about this topic: ${JSON.stringify(feature)}.`,
+      'Explain this project using 5–10 concise slides (3–14 when appropriate).',
+      'Use formatVersion 1. Begin with a title slide and end with useful takeaways.',
+      'Use title, content, and diagram layouts. Give each slide a unique ID, a clear title,',
+      'short subtitle, up to four talking points, speaker notes, and exact source evidence.',
+      'Title slides have no bullets. Diagram slides allow at most one short takeaway.',
+      'Keep each slide subtitle plus bullets within 520 characters total.',
+      'Keep slides readable at presentation size. Put detail in notes rather than bullets.',
+      'Use our structured diagram types where they help; never return HTML, SVG or Mermaid.',
+      'system-map shows components in three layers (0–2), at most two nodes per layer.',
+      'request-journey shows ordered steps; put nodes in execution order and connect them.',
+      'module-detail shows the internal parts of a single module inside a shared boundary.',
+      'Diagrams allow at most six nodes and eight connections; split larger diagrams.',
+      'Keep node titles and edge labels short. Use group for a short role or group label.',
+      'Every connection must reference a node in that diagram. Mark uncertain edges inferred.',
+      'Only diagram layouts have a non-null diagram. All other slides use diagram: null.',
+      'Use at least one diagram when the source supports it; do not force an invented one.',
+      'Ground every slide in actual source and cite it. Do not invent systems or behavior.',
+      'If the topic is absent, explain what was inspected and the limitation in the deck.',
+    ].join(' '),
     endpoints: [
       'Inventory REST/HTTP API endpoints for every server implemented in this project.',
       'Inspect the whole project, including every server in a monorepo.',
@@ -246,6 +269,7 @@ export function validateAnalysis(stage, value, index, snapshot) {
     knownPaths: new Set(Object.keys(snapshot.sources)),
     hashes: snapshot.fingerprints,
   });
+  if (stage === 'presentation') validatePresentation(value);
   const indexed = new Set(
     flattenTree(index.tree).map(
       // Collect every indexed path for entrypoint validation.

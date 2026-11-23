@@ -334,6 +334,7 @@ export async function projectView(project, index, understanding, job) {
   const nounAnalyses = (understanding.nounAnalyses || []).map(presentAnalysis);
   const sequences = (understanding.sequences || []).map(presentAnalysis);
   const endpointAnalyses = (understanding.endpointAnalyses || []).slice(-1).map(presentAnalysis);
+  const presentations = (understanding.presentations || []).map(presentAnalysis);
   const directoryDescriptions = new Map((directoryData?.directories || []).map(
     // Index directory explanations by their project-relative path.
     (node) => [node.path, node],
@@ -373,6 +374,7 @@ export async function projectView(project, index, understanding, job) {
   const nodes = flattenTree(tree);
   const reviews = [
     directoryData, ...architectures, ...flows, ...nounAnalyses, ...sequences, ...endpointAnalyses,
+    ...presentations,
   ]
     .filter(Boolean).map(
       // Aggregate source status for the project header only.
@@ -408,6 +410,7 @@ export async function projectView(project, index, understanding, job) {
     nounAnalyses: resolveSources(nounAnalyses),
     sequences: resolveSources(sequences),
     endpointAnalyses: resolveSources(endpointAnalyses),
+    presentations: resolveSources(presentations),
     nextPrompts: understanding.nextPrompts || {},
     job,
     coverage: job?.coverage || understanding.directoryAnalysis?.coverage || null,
@@ -430,6 +433,7 @@ export async function projectView(project, index, understanding, job) {
       nounAnalyses: nounAnalyses.length,
       sequences: sequences.length,
       endpointAnalyses: endpointAnalyses.length,
+      presentations: presentations.length,
     },
     review: {
       available: availableReviews.length > 0,
