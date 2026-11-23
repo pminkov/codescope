@@ -76,6 +76,33 @@ export function stackLabels(value) {
 }
 
 export const schemas = {
+  endpoints: objectSchema({
+    nextPrompts,
+    title: { ...text, maxLength: 120 },
+    description: { ...text, maxLength: 1200 },
+    scope: { ...text, maxLength: 600 },
+    sources: arraySchema(source, 16),
+    servers: arraySchema(objectSchema({
+      id: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$', minLength: 1, maxLength: 80 },
+      name: { ...text, maxLength: 120 },
+      description: { ...text, maxLength: 800 },
+      address: nullableSchema({ ...text, maxLength: 300 }),
+      sources: { ...arraySchema(source, 12), minItems: 1 },
+      endpoints: arraySchema(objectSchema({
+        id: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$', minLength: 1, maxLength: 80 },
+        method: { type: 'string', enum: [
+          'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'CONNECT', 'TRACE', 'ANY',
+        ] },
+        path: { ...text, maxLength: 600, pattern: '^/' },
+        description: { ...text, maxLength: 800 },
+        handler: { ...string, maxLength: 200 },
+        request: { ...text, maxLength: 1000 },
+        response: { ...text, maxLength: 1000 },
+        sources: { ...arraySchema(source, 12), minItems: 1 },
+      }), 2000),
+    }), 100),
+    notes: arraySchema({ ...text, maxLength: 600 }, 12),
+  }),
   sequence: objectSchema({
     nextPrompts,
     title: { ...text, maxLength: 120 },

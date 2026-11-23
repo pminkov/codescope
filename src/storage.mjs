@@ -30,6 +30,7 @@ const createEmptyUnderstanding = () => ({
   flows: [],
   nounAnalyses: [],
   sequences: [],
+  endpointAnalyses: [],
 });
 
 // Recognize jobs that are queued or currently running.
@@ -41,6 +42,7 @@ const analysisTypes = {
   flows: { collection: 'flows', stage: 'flow', request: 'requestedFeature' },
   nouns: { collection: 'nounAnalyses', stage: 'nouns', request: 'requestedScope' },
   sequences: { collection: 'sequences', stage: 'sequence', request: 'requestedQuestion' },
+  endpoints: { collection: 'endpointAnalyses', stage: 'endpoints', request: null },
 };
 
 // Locate a saved result without treating a missing selection as a different analysis.
@@ -59,7 +61,8 @@ function locateSavedAnalysis(understanding, kind, id) {
 
 // Recover the original question, including older results without request metadata.
 function savedAnalysisRequest(kind, analysis) {
-  if (kind === 'directories' || kind === 'nouns' && !analysis.requestedScope) return null;
+  if (['directories', 'endpoints'].includes(kind) || kind === 'nouns' && !analysis.requestedScope)
+    return null;
   if (kind === 'architecture' && (analysis.id === 'overview' || analysis.requestedQuestion === null))
     return null;
   const request = analysis[analysisTypes[kind].request] || analysis.title;
@@ -71,7 +74,7 @@ function savedAnalysisRequest(kind, analysis) {
 
 // Build revision context without exposing the saved source inventory to the model.
 function savedAnalysisRevision(understanding, stage, job) {
-  if (!job.analysisId || stage === 'directories') return undefined;
+  if (!job.analysisId || ['directories', 'endpoints'].includes(stage)) return undefined;
   const kind = Object.keys(analysisTypes).find(
     // Resolve the selected result collection from its worker stage.
     (entry) => analysisTypes[entry].stage === stage,
@@ -144,7 +147,14 @@ function mergeStageResult(understanding, result, stage, job, index, snapshot) {
     coverage: snapshot.coverage,
   };
   let key = stage;
-  if (job.analysisId && stage !== 'directories') {
+  if (stage === 'endpoints') {
+    const previous = understanding.endpointAnalyses?.at(-1);
+    key = previous?.id || 'endpoints';
+    // Rediscovery replaces the project-wide inventory only after validation succeeds.
+    understanding.endpointAnalyses = [{
+      ...analysis, id: key, createdAt: previous?.createdAt || timestamp,
+    }];
+  } else if (job.analysisId && stage !== 'directories') {
     const kind = Object.keys(analysisTypes).find(
       // Map the single rerun stage back to its saved result collection.
       (entry) => analysisTypes[entry].stage === stage,
@@ -397,7 +407,8 @@ export class ProjectStore {
 
     try {
       const files = await readdir(directory);
-      for (const stage of ['directories', 'architecture', 'flow', 'nouns', 'sequence']) {
+      const stages = ['directories', 'architecture', 'flow', 'nouns', 'sequence', 'endpoints'];
+      for (const stage of stages) {
         const filename = `${stage}.prompt.txt`;
         if (!files.includes(filename)) continue;
         const path = resolve(directory, filename);
@@ -457,7 +468,8 @@ export class ProjectStore {
   // Validate and persist a new job before adding it to the worker queue.
   async enqueue(id, kind = 'initial', feature) {
     const project = await this.get(id);
-    if (!['initial', 'directories', 'flow', 'architecture', 'nouns', 'sequence'].includes(kind))
+    if (!['initial', 'directories', 'flow', 'architecture', 'nouns', 'sequence', 'endpoints']
+      .includes(kind))
       throw fail('Unknown analysis job kind.');
     if (this.edits.has(id)) throw fail('A diagram edit is being saved. Try again shortly.', 409);
     if (isJobActive(project.job))
@@ -483,7 +495,9 @@ export class ProjectStore {
       feature !== undefined &&
       (typeof feature !== 'string' || feature.length > 4000)
     )
-      throw fail('Describe the nouns scope in 4,000 characters or fewer, or leave it blank.');
+      throw fail(`Describe the ${kind} scope in 4,000 characters or fewer, or leave it blank.`);
+    if (kind === 'endpoints' && feature !== undefined)
+      throw fail('Endpoints discovery covers the entire project and does not accept a scope.');
     return this.queueAnalysisJob(project, kind, feature);
   }
 
@@ -518,6 +532,8 @@ export class ProjectStore {
     const project = await this.get(id);
     if (!Object.hasOwn(analysisTypes, kind) || !['rerun', 'modify', 'duplicate', 'delete'].includes(action))
       throw fail('Unknown analysis action.');
+    if (kind === 'endpoints' && ['modify', 'duplicate'].includes(action))
+      throw fail('Endpoints discovery can only be rerun or deleted.');
     if (action === 'modify') {
       if (kind === 'directories') throw fail('Directory analysis cannot be modified with a prompt.');
       if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 4000)
@@ -550,6 +566,7 @@ export class ProjectStore {
           target.entries.splice(target.index + 1, 0, copy);
           resultId = copy.id;
         } else if (kind === 'directories') understanding.directoryAnalysis = null;
+        else if (kind === 'endpoints') understanding.endpointAnalyses = [];
         else target.entries.splice(target.index, 1);
 
         understanding.updatedAt = new Date().toISOString();
@@ -705,7 +722,7 @@ export class ProjectStore {
     const stages =
       {
         directories: ['directories'], flow: ['flow'], architecture: ['architecture'],
-        nouns: ['nouns'], sequence: ['sequence'],
+        nouns: ['nouns'], sequence: ['sequence'], endpoints: ['endpoints'],
       }[job.kind] ||
       ['directories', 'architecture'];
     let understanding = await readJson(
@@ -730,7 +747,9 @@ export class ProjectStore {
                   ? 'Tracing interactions for the sequence diagram…'
                   : stage === 'nouns'
                     ? 'Identifying nouns and their relationships…'
-                    : 'Tracing the requested code flow…',
+                    : stage === 'endpoints'
+                      ? 'Finding servers and REST endpoints…'
+                      : 'Tracing the requested code flow…',
       });
       let lastProgress = 0;
       const result = await analyzeStage({

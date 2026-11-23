@@ -132,6 +132,7 @@ function analysisHistory(understanding) {
     nouns: understanding.nounAnalyses || [],
     flows: understanding.flows || [],
     sequences: understanding.sequences || [],
+    endpoints: (understanding.endpointAnalyses || []).slice(-1),
   };
 
   return Object.fromEntries(Object.entries(groups).map(
@@ -150,6 +151,29 @@ function analysisHistory(understanding) {
 // Describe the requested analysis, source evidence, and next questions to suggest.
 export function analysisPrompt(stage, project, index, snapshot, feature, understanding = {}, revision) {
   const purpose = {
+    endpoints: [
+      'Inventory REST/HTTP API endpoints for every server implemented in this project.',
+      'Inspect the whole project, including every server in a monorepo.',
+      'Find server entrypoints and follow router imports, mount prefixes, middleware,',
+      'framework route conventions, and conditional dispatch to actual handlers.',
+      'Group endpoints by the server that exposes them. Include health checks and webhooks.',
+      'Do not count outgoing HTTP clients, documentation examples, static assets, browser',
+      'page routes, or catch-all error responses as REST endpoints.',
+      'Use full mounted paths with named parameters, such as /api/projects/:id.',
+      'Expand finite route alternatives into separate entries and list each supported',
+      'method separately. Use ANY only when the source genuinely accepts arbitrary methods.',
+      'Give servers unique IDs and endpoints unique IDs within their server. Each method',
+      'and path pair must be unique within a server. Different servers may share paths.',
+      'Describe each endpoint, its exact handler symbol when identifiable, request inputs',
+      'and access requirements, and response behavior including meaningful status codes.',
+      'Distinguish application responses from middleware rejections. Never invent payloads,',
+      'authentication, methods, servers, or routes. State unknown details explicitly.',
+      'Cite the server listener or entrypoint and each endpoint registration/dispatch and',
+      'handler with exact source lines. Set address to source-backed listener configuration',
+      'or null when unknown. Do not invent deployment URLs or expose secret configuration.',
+      'If no servers or REST endpoints are implemented, return empty arrays with an',
+      'explanation of what was inspected. Put dynamic-routing and source limitations in notes.',
+    ].join(' '),
     directories:
       'Explain the project and every indexed directory, including the root path "". Describe files that you inspect. Return directory entries only for real paths in the index. An entry must name a real file or be null. Write the description as one or two short sentences, detail as a short paragraph, and highlights as a few useful points. Store evidence in the sources arrays on the root summary, each directory, and each file; do not embed bracketed citation markers in prose. The stack field is compact header metadata: at most six technology names, each at most 32 characters (for example: Node.js, TypeScript, esbuild, Vercel). Do not put sentences, explanations, Markdown, backticks, source citations, or file paths in stack. Put implementation details in the directory descriptions instead.',
     architecture: `${feature ? `Answer this user-requested architecture question with a focused component diagram: ${JSON.stringify(feature)}. Show the relevant subsystem and its internal components; include surrounding systems only where they explain a boundary or dependency. Use a concise title describing this view. If the requested subsystem cannot be found, explain where you looked and what is missing, with source evidence, rather than inventing an implementation.` : 'Describe the overall system design as an arbitrary graph of components and their connections.'} Model what this project actually is: a library, CLI, app, collection of scripts, documentation folder, or multiple systems. Do not assume a browser, database, cloud provider, or external API exists. Include source citations for implemented nodes and edges. Mark connections that cannot be verified as inferred. A directory without runnable code can have a simple document/data component with no edges.`,
@@ -314,6 +338,27 @@ export function validateAnalysis(stage, value, index, snapshot) {
     for (const relationship of value.relationships)
       if (!ids.has(relationship.from) || !ids.has(relationship.to))
         throw new Error('Noun relationship points to an unknown noun.');
+  }
+
+  if (stage === 'endpoints') {
+    const serverIds = new Set();
+    for (const server of value.servers) {
+      if (serverIds.has(server.id)) throw new Error('Endpoint server IDs must be unique.');
+      serverIds.add(server.id);
+      const endpointIds = new Set();
+      const routes = new Set();
+
+      // Route identity belongs to a server; independent servers can expose the same path.
+      for (const endpoint of server.endpoints) {
+        if (endpointIds.has(endpoint.id))
+          throw new Error('Endpoint IDs must be unique per server.');
+        endpointIds.add(endpoint.id);
+        const route = `${endpoint.method} ${endpoint.path}`;
+        if (routes.has(route))
+          throw new Error('Endpoint methods and paths must be unique per server.');
+        routes.add(route);
+      }
+    }
   }
 
   // Validate nested citations and attach their snapshot fingerprints.

@@ -9,6 +9,7 @@ import {
 } from './views/directories.js';
 import { renderFlowsView } from './views/flows.js';
 import { renderNounsView, renderNounDetails } from './views/nouns.js';
+import { renderEndpointsView } from './views/endpoints.js';
 import { renderSequencesView, renderSequenceDetails } from './views/sequences.js';
 import { renderArchitectureView, renderNodeDetails } from './views/architecture.js';
 import { renderAllAnalysesView } from './views/all-analyses.js';
@@ -70,6 +71,7 @@ const projectTabs = [
   'flows',
   'nouns',
   'sequences',
+  'endpoints',
   'all',
 ];
 const analysisForms = {
@@ -85,6 +87,7 @@ const jobTypeLabels = {
   flow: 'Code flow',
   nouns: 'Nouns',
   sequence: 'Sequence diagram',
+  endpoints: 'Endpoints',
 };
 const dialogStack = setupDialogStack();
 
@@ -95,6 +98,7 @@ function currentAskContext() {
   let selected;
   if (tab === 'architecture') selected = getSelectedArchitecture();
   else if (tab === 'nouns') selected = getSelectedNounsAnalysis();
+  else if (tab === 'endpoints') selected = getSelectedEndpointsAnalysis();
   else if (tab === 'sequences') selected = getSelectedSequence();
   else if (tab === 'flows')
     selected =
@@ -121,6 +125,7 @@ function currentAskContext() {
     flows: 'Code flows',
     nouns: 'Nouns',
     sequences: 'Sequences',
+    endpoints: 'Endpoints',
     all: 'All analyses',
   };
   const detailDialog = dialogStack.latestDialog();
@@ -217,10 +222,11 @@ selectElement('#theme-toggle').addEventListener('click', () =>
 function getSelectedAnalysisReview() {
   const { tab, selection } = currentRoute();
   if (tab === 'architecture') return getSelectedArchitecture();
-  if (['flows', 'nouns', 'sequences'].includes(tab)) {
-    const analyses =
-      (tab === 'flows' ? data.flows : tab === 'sequences' ? data.sequences : data.nounAnalyses) ||
-      [];
+  if (['flows', 'nouns', 'sequences', 'endpoints'].includes(tab)) {
+    const analyses = ({
+      flows: data.flows, nouns: data.nounAnalyses, sequences: data.sequences,
+      endpoints: data.endpointAnalyses,
+    })[tab] || [];
     return (
       analyses.find(
         // Match the same saved result used by the content view.
@@ -383,6 +389,18 @@ function renderNouns() {
   selectElement('#view').innerHTML = renderNounsView(data, getSelectedNounsAnalysis(), {
     draft: getAnalysisRequest('nouns', nounsDrafts),
     projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
+}
+
+// Resolve the single project-wide inventory for rendering, Ask, and saved-result actions.
+function getSelectedEndpointsAnalysis() {
+  return data?.endpointAnalyses?.at(-1);
+}
+
+// Show endpoint discovery or the saved inventory with its freshness and rerun controls.
+function renderEndpoints() {
+  selectElement('#view').innerHTML = renderEndpointsView(data, getSelectedEndpointsAnalysis(), {
     actionsBusy: isAnalysisBusy(),
   });
 }
@@ -718,6 +736,7 @@ function render() {
   if (tab === 'flows') renderFlows();
   else if (tab === 'architecture') renderArchitecture();
   else if (tab === 'nouns') renderNouns();
+  else if (tab === 'endpoints') renderEndpoints();
   else if (tab === 'sequences') renderSequences();
   else if (tab === 'code-scan') {
     selectElement('#view').innerHTML = renderCodeScan(
@@ -1103,7 +1122,8 @@ function confirmProjectDeletion() {
   selectElement('#action-title').textContent = 'Delete project?';
   selectElement('#action-description').textContent =
     `Delete “${data.name}” from CodeScope? This removes its saved explanations, diagrams, ` +
-    'flows, Nouns analyses, sequence analyses, and debugging job history. This cannot be undone.';
+    'flows, Nouns and Endpoints analyses, sequence analyses, and debugging job history. ' +
+    'This cannot be undone.';
   selectElement('#action-usage').textContent =
     'Any queued or running analysis for this project will be stopped.';
   selectElement('#action-result').textContent =
@@ -1130,6 +1150,7 @@ function analysisTitle(kind, id) {
     flows: data.flows,
     nouns: data.nounAnalyses,
     sequences: data.sequences,
+    endpoints: data.endpointAnalyses,
   };
 
   return (
@@ -1273,7 +1294,7 @@ async function runAction(action) {
                 ? 'sequences'
                 : job.kind === 'flow'
                   ? 'flows'
-                  : ['architecture', 'nouns', 'directories'].includes(job.kind)
+                  : ['architecture', 'nouns', 'endpoints', 'directories'].includes(job.kind)
                     ? job.kind
                     : 'analysis',
             ),
@@ -1289,7 +1310,8 @@ async function runAction(action) {
       );
     } else {
       const result = await postJson(projectApiUrl(action));
-      if (action === 'directories' && data?.id === projectId) data.job = result;
+      if (['directories', 'endpoints'].includes(action) && data?.id === projectId)
+        data.job = result;
     }
 
     await loadCurrentProject();
@@ -1511,7 +1533,7 @@ async function initializeApp() {
           (project) => project.id === saved,
         )?.id || projects[0].id;
       const oldHash = location.hash.match(
-        /^#(flows|directories|architecture|nouns|sequences|code-scan|all)(?:\/(.*))?$/,
+        /^#(flows|directories|architecture|nouns|sequences|endpoints|code-scan|all)(?:\/(.*))?$/,
       );
       const current = currentRoute();
       history.replaceState(
@@ -1965,7 +1987,7 @@ selectElement('#project-form').addEventListener('submit', async (event) => {
     button.disabled = false;
   }
 });
-// Remember unsent flow, architecture, and nouns requests per project.
+// Remember unsent analysis requests per project.
 document.addEventListener('input', (event) => {
   if (event.target.id === 'flow-feature') flowDrafts.set(data.id, event.target.value);
   if (event.target.id === 'architecture-question')

@@ -9,6 +9,13 @@ export function getAnalysisEntries(project) {
     });
   }
 
+  const endpoints = project.endpointAnalyses?.at(-1);
+  if (endpoints) entries.push({
+    tab: 'endpoints', id: '', label: 'Endpoints', icon: 'endpoints',
+    title: endpoints.title, description: endpoints.description,
+    analyzedAt: endpoints.review?.reviewedAt,
+  });
+
   for (const [collection, tab, label, icon] of [
     ['architectures', 'architecture', 'Architecture', 'architecture'],
     ['flows', 'flows', 'Code flow', 'flow'],

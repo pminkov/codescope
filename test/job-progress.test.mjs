@@ -28,7 +28,9 @@ test('finished progress can be closed manually and closure survives reloads', ()
   const reloaded = createJobDismissals(host);
   assert.equal(reloaded.isDismissed('project', job), true);
 
-  for (const kind of ['initial', 'directories', 'architecture', 'flow', 'nouns', 'sequence']) {
+  for (const kind of [
+    'initial', 'directories', 'architecture', 'flow', 'nouns', 'sequence', 'endpoints',
+  ]) {
     for (const status of ['queued', 'running', 'completed', 'failed', 'cancelled', 'interrupted']) {
       const next = { id: `${kind}-${status}`, kind, status };
       assert.equal(reloaded.isDismissed('project', next), false);
@@ -241,5 +243,19 @@ test('queued and running jobs expose analysis navigation before completion', () 
     }]);
     project.job.kind = 'directories';
     assert.deepEqual(getJobAnalysisTargets(project), [directories]);
+  }
+});
+
+// Endpoint discovery always opens the single inventory rather than a numbered result URL.
+test('endpoint jobs open the project-wide inventory during and after discovery', () => {
+  const expected = [{ tab: 'endpoints', selection: '', label: 'Open analysis' }];
+  for (const status of ['queued', 'running', 'completed']) {
+    const project = {
+      endpointAnalyses: [{ id: 'endpoints' }],
+      job: { kind: 'endpoints', status, resultId: 'endpoints' },
+    };
+    assert.deepEqual(getJobAnalysisTargets(project), expected);
+    project.endpointAnalyses = [];
+    assert.deepEqual(getJobAnalysisTargets(project), status === 'completed' ? [] : expected);
   }
 });

@@ -837,3 +837,34 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 
 /* Keep progress menus inside the viewport when their trigger sits on the right. */
 .job-actions .actions-menu { left: auto; right: 0; }
+
+/* Group HTTP API routes by server while keeping long route patterns readable. */
+.endpoints-workspace { display: block; min-height: 0; }
+.endpoints-content > .lead + [data-action="endpoints"] { margin-top: 24px; }
+.endpoints-scope { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: baseline; margin: 24px 0; color: var(--muted); }
+.endpoints-scope p { flex: 1; margin: 0; }
+.endpoints-scope > span, .endpoint-count { color: var(--faint); font-size: .875rem; white-space: nowrap; }
+.endpoint-server + .endpoint-server { margin-top: 32px; }
+.endpoint-server > header { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+.endpoint-server h3 { margin: 0 0 8px; font-size: 1.125rem; font-weight: 500; }
+.endpoint-server header p { margin: 0 0 8px; color: var(--muted); }
+.endpoint-server header > div { min-width: 0; }
+.endpoint-server header code { overflow-wrap: anywhere; }
+.endpoint-route { border-top: 1px solid var(--soft-border); }
+.endpoint-route:last-child { border-bottom: 1px solid var(--soft-border); }
+.endpoint-route > summary { display: flex; align-items: baseline; gap: 12px; padding: 14px 0; cursor: pointer; list-style: none; }
+.endpoint-route > summary::-webkit-details-marker { display: none; }
+.endpoint-route > summary:hover { color: var(--green); }
+.endpoint-route summary > code { min-width: 0; overflow-wrap: anywhere; font-size: .875rem; }
+.endpoint-route summary > .icon { margin-left: auto; align-self: center; color: var(--faint); }
+.endpoint-route[open] summary > .icon { transform: rotate(180deg); }
+.endpoint-method { flex-shrink: 0; min-width: 62px; color: var(--green); font-size: .8125rem; font-weight: 600; }
+.endpoint-details { padding: 0 0 20px; }
+.endpoint-details > p { margin: 0 0 16px; color: var(--muted); }
+.endpoint-details dl { display: grid; gap: 14px; margin: 0; }
+.endpoint-details dl > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 12px; }
+.endpoint-details dt { font-size: .875rem; color: var(--faint); }
+.endpoint-details dd { margin: 0; overflow-wrap: anywhere; }
+.endpoint-notes { margin-top: 28px; color: var(--muted); }
+.endpoint-notes h3 { color: var(--text); font-size: 1rem; font-weight: 500; }
+@media (max-width: 420px) { .endpoint-server > header { flex-direction: column; gap: 6px; } .endpoint-details dl > div { grid-template-columns: 1fr; gap: 4px; } }

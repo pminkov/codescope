@@ -1,7 +1,7 @@
 # CodeScope
 
 Explore a codebase with directory explanations, architecture and sequence diagrams,
-code flows, and answers linked to source. Runs locally using the Codex CLI.
+code flows, REST endpoint inventories, and answers linked to source. Runs locally using the Codex CLI.
 
 ## Run
 

@@ -11,6 +11,7 @@ import { ProjectStore, writeJson } from '../src/storage.mjs';
 import { scanDirectory, flattenTree, readSource, indexProject, fingerprint, projectView } from '../src/analysis.mjs';
 import { runCodex, createSnapshot, validateAnalysis, analysisPrompt } from '../src/runner.mjs';
 import { schemas, validateSchema, stackLabels } from '../src/schemas.mjs';
+import { createEndpointsResult } from './endpoint-fixtures.mjs';
 
 // Create an isolated project directory and storage location for a test.
 async function createProjectFixture(context) {
@@ -39,6 +40,7 @@ async function waitFor(check) {
 const createSourceCitation = () => ({ path: 'src/main.ts', line: 1, symbol: 'main' });
 
 const outputs = {
+  endpoints: createEndpointsResult,
   // Return a source-backed interaction with a reply, event, and self call.
   sequence: () => ({
     nextPrompts: {
@@ -323,7 +325,7 @@ test('enqueue rejects a missing project without creating a job', async (context)
   const expected = { status: 404, message: 'Project not found.' };
 
   await assert.rejects(store.enqueue('missing'), expected);
-  for (const kind of ['directories', 'architecture', 'flow', 'nouns', 'sequence'])
+  for (const kind of ['directories', 'architecture', 'flow', 'nouns', 'sequence', 'endpoints'])
     await assert.rejects(store.enqueue('missing', kind, 'Explain main()'), expected);
 
   assert.equal(run.mock.callCount(), 0);
@@ -409,7 +411,8 @@ test('analysis actions preserve result identity, requests, baselines, and unrela
     assert.equal((await store.get(project.id)).job.resultId, copy.id);
     assert.notDeepEqual(replacement.baseline.files, original.baseline.files);
     assert.equal(afterRerun[collection].length, beforeRerun[collection].length);
-    for (const other of ['directoryAnalysis', 'architectures', 'flows', 'nounAnalyses', 'sequences']) {
+    for (const other of ['directoryAnalysis', 'architectures', 'flows', 'nounAnalyses', 'sequences',
+      'endpointAnalyses']) {
       if (other !== collection) assert.deepEqual(afterRerun[other], beforeRerun[other]);
     }
     assert.deepEqual(afterRerun[collection].filter(
@@ -534,7 +537,8 @@ test('modification prompts revise selected results and survive later reruns', as
       // Compare other results in their original storage order.
       (entry) => entry.id !== original.id,
     ));
-    for (const key of ['directoryAnalysis', 'architectures', 'flows', 'nounAnalyses', 'sequences'])
+    for (const key of ['directoryAnalysis', 'architectures', 'flows', 'nounAnalyses', 'sequences',
+      'endpointAnalyses'])
       if (key !== collection) assert.deepEqual(after[key], before[key]);
   }
   await assert.rejects(store.changeAnalysis(project.id, 'directories', 'directories',
@@ -2581,6 +2585,7 @@ test('HTTP enqueue rejects a missing project without creating a job', async (con
     ['architecture', { question: 'Explain main()' }],
     ['flows', { feature: 'Trace main()' }],
     ['nouns', { scope: 'src/' }],
+    ['endpoints', { scope: 'src/' }],
     ['sequences', { question: 'Diagram main()' }],
   ]) {
     const response = await fetch(`${base}/api/projects/missing/${endpoint}`, {

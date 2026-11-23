@@ -52,7 +52,7 @@ export function renderAnalysisControls(kind, id, { review, ...options }) {
   `;
 }
 
-// Render one menu for the selected saved result, omitting copies for directories.
+// Render saved-result actions, keeping project-wide inventories limited to rediscovery.
 export function renderAnalysisMenu(kind, id, { busy, hasDirectoryAnalysis = true }) {
   const missing = kind === 'directories' && !hasDirectoryAnalysis;
   const attributes = `data-analysis-kind="${kind}" data-analysis-id="${escape(id)}"`;
@@ -83,7 +83,7 @@ export function renderAnalysisMenu(kind, id, { busy, hasDirectoryAnalysis = true
           </span>
         </button>
         ${
-          kind !== 'directories'
+          !['directories', 'endpoints'].includes(kind)
             ? /* HTML */ `
                 <button
                   type="button"

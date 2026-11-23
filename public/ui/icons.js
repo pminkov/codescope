@@ -1,4 +1,9 @@
 const icons = {
+  endpoints: /* HTML */ `
+    <rect x="3" y="3" width="18" height="7" rx="2" />
+    <rect x="3" y="14" width="18" height="7" rx="2" />
+    <path d="M7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6" />
+  `,
   folder: /* HTML */ `
     <path d="M3 7V5a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
   `,

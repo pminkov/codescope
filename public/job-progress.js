@@ -3,6 +3,9 @@ export function getJobAnalysisTargets(project) {
   const job = project?.job;
   if (!['queued', 'running', 'completed'].includes(job?.status)) return [];
   const active = ['queued', 'running'].includes(job.status);
+  if (job.kind === 'endpoints')
+    return active || project.endpointAnalyses?.length
+      ? [{ tab: 'endpoints', selection: '', label: 'Open analysis' }] : [];
   const targets = [];
   if (['initial', 'directories'].includes(job.kind) && (active || project.hasDirectoryAnalysis))
     targets.push({ tab: 'directories', selection: '', label: 'Open directories' });

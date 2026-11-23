@@ -5,7 +5,9 @@ import { createSnapshot } from './runner.mjs';
 import { fail, flattenTree } from './analysis.mjs';
 import { validateSchema } from './schemas.mjs';
 
-const views = ['directories', 'code-scan', 'architecture', 'flows', 'nouns', 'sequences', 'all'];
+const views = [
+  'directories', 'code-scan', 'architecture', 'flows', 'nouns', 'sequences', 'endpoints', 'all',
+];
 export const answerSchema = {
   type: 'object', additionalProperties: false, required: ['answer', 'references'],
   properties: {
@@ -75,6 +77,7 @@ export function selectedAskContext(view, context) {
   const collection = {
     architecture: view.architectures, flows: view.flows,
     nouns: view.nounAnalyses, sequences: view.sequences,
+    endpoints: view.endpointAnalyses || [],
   }[context.view];
   if (collection) {
     const analysis = collection.find(

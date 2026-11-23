@@ -27,13 +27,17 @@ const assets = {
   '/views/flows.js': ['views/flows.js', 'text/javascript'],
   '/views/architecture.js': ['views/architecture.js', 'text/javascript'],
   '/views/nouns.js': ['views/nouns.js', 'text/javascript'],
+  '/views/endpoints.js': ['views/endpoints.js', 'text/javascript'],
   '/views/sequences.js': ['views/sequences.js', 'text/javascript'],
   '/views/all-analyses.js': ['views/all-analyses.js', 'text/javascript'],
   '/views/job-progress.js': ['views/job-progress.js', 'text/javascript'],
   '/views/workspace.js': ['views/workspace.js', 'text/javascript'],
   '/styles.css': ['styles.css', 'text/css'],
 };
-const pageRoute = /^\/(?:projects\/[a-zA-Z0-9_-]+\/)?(?:flows|directories|architecture|nouns|sequences|code-scan|all)(?:\/|$)/;
+const pageRoute = new RegExp(
+  '^/(?:projects/[a-zA-Z0-9_-]+/)?' +
+  '(?:flows|directories|architecture|nouns|sequences|endpoints|code-scan|all)(?:/|$)',
+);
 
 // Read a bounded JSON object from a mutation request.
 async function readJsonBody(request) {
@@ -111,7 +115,8 @@ async function handleProjectRequest(request, url, match, store, json) {
     return json(await store.deleteProject(id));
   }
 
-  if (['analysis', 'directories', 'flows', 'architecture', 'nouns', 'sequences', 'cancel'].includes(action)) {
+  if (['analysis', 'directories', 'flows', 'architecture', 'nouns', 'sequences', 'endpoints',
+    'cancel'].includes(action)) {
     if (request.method !== 'POST') throw fail('Use POST for this action.', 405);
     const body = await readJsonBody(request);
     if (action === 'cancel') return json(await store.cancel(id));
@@ -123,10 +128,10 @@ async function handleProjectRequest(request, url, match, store, json) {
           ? 'sequence'
           : action === 'flows'
             ? 'flow'
-            : ['architecture', 'nouns', 'directories'].includes(action)
+            : ['architecture', 'nouns', 'endpoints', 'directories'].includes(action)
               ? action
               : 'initial',
-        action === 'nouns' ? body.scope
+        ['nouns', 'endpoints'].includes(action) ? body.scope
           : ['architecture', 'sequences'].includes(action) ? body.question : body.feature,
       ),
       202,
@@ -202,7 +207,11 @@ export function createApp({
         }
 
         const analysisAction = url.pathname.match(
-          /^\/api\/projects\/([a-zA-Z0-9_-]+)\/analyses\/(directories|architecture|flows|nouns|sequences)\/([a-zA-Z0-9_-]+)\/(rerun|modify|duplicate|delete)$/,
+          new RegExp(
+            '^/api/projects/([a-zA-Z0-9_-]+)/analyses/' +
+            '(directories|architecture|flows|nouns|sequences|endpoints)/' +
+            '([a-zA-Z0-9_-]+)/(rerun|modify|duplicate|delete)$',
+          ),
         );
         if (analysisAction) {
           if (request.method !== 'POST') throw fail('Use POST for analysis actions.', 405);
@@ -224,7 +233,11 @@ export function createApp({
         }
 
         const match = url.pathname.match(
-          /^\/api\/projects\/([a-zA-Z0-9_-]+)(?:\/(source|analysis|directories|flows|architecture|nouns|sequences|cancel|delete|rename))?$/,
+          new RegExp(
+            '^/api/projects/([a-zA-Z0-9_-]+)(?:/' +
+            '(source|analysis|directories|flows|architecture|nouns|sequences|endpoints|' +
+            'cancel|delete|rename))?$',
+          ),
         );
         if (match) {
           if (match[2] === 'delete' && request.method === 'POST')
