@@ -84,6 +84,7 @@ export function renderSequencesView(project, selected, { draft, projectUrl, acti
         <button class="button" type="submit" ${busy ? 'disabled' : ''}>Generate sequence</button>
         <p class="flow-error" role="alert"></p>
       </form>
+      ${analyses.length ? '<h3 class="sequence-saved-heading">Saved diagrams</h3>' : ''}
       <div class="flow-options">
         ${analyses
           .map(

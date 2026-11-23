@@ -740,10 +740,30 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 /* Align the request form with its heading and give each control room to breathe. */
 .sequence-sidebar .sidebar-heading { padding: 0; }
 .sequence-sidebar .flow-composer { margin-top: 24px; }
+.sequence-sidebar .flow-composer label { color: var(--muted); }
 .sequence-sidebar .flow-composer textarea { display: block; }
-.sequence-sidebar .flow-composer .button { margin-top: 14px; }
+.sequence-sidebar .flow-composer .button {
+  margin-top: 14px;
+  width: 100%;
+  justify-content: center;
+  background: var(--green-bg);
+  color: var(--green);
+}
+.sequence-sidebar .flow-composer .button:hover:enabled { border-color: var(--green-line); }
+.sequence-saved-heading {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: .8125rem;
+  font-weight: 400;
+}
 .sequence-sidebar .flow-options { flex-direction: column; }
-.sequence-sidebar .flow-option p { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.sequence-sidebar .flow-option p {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .sequence-figure { margin: 24px 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
 .sequence-figure figcaption { display: grid; gap: 5px; padding: 15px 18px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: .875rem; }
 .sequence-figure figcaption strong { color: var(--text); font-weight: 550; }
