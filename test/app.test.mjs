@@ -308,6 +308,32 @@ test('indexing respects nested ignore rules, omits secrets and symlinks, and rej
   await assert.rejects(readSource(root, 'src/main.ts', tree), { status: 404 });
 });
 
+// Reject unknown project IDs before enqueueing work or changing saved projects.
+test('enqueue rejects a missing project without creating a job', async (context) => {
+  const setup = await createProjectFixture(context);
+  const run = context.mock.fn(runFakeAnalysis);
+  const store = new ProjectStore({ ...setup, run });
+  // Drain pending writes before the fixture is removed.
+  context.after(() => store.close());
+  await store.add({ path: setup.root, analyze: false });
+  const projects = await store.list();
+  const registryPath = join(setup.dataDirectory, 'projects.json');
+  const registry = await readFile(registryPath, 'utf8');
+  const savedProjects = await readdir(join(setup.dataDirectory, 'projects'));
+  const expected = { status: 404, message: 'Project not found.' };
+
+  await assert.rejects(store.enqueue('missing'), expected);
+  for (const kind of ['directories', 'architecture', 'flow', 'nouns', 'sequence'])
+    await assert.rejects(store.enqueue('missing', kind, 'Explain main()'), expected);
+
+  assert.equal(run.mock.callCount(), 0);
+  assert.deepEqual(store.queue, []);
+  assert.equal(store.running, null);
+  assert.deepEqual(await store.list(), projects);
+  assert.equal(await readFile(registryPath, 'utf8'), registry);
+  assert.deepEqual(await readdir(join(setup.dataDirectory, 'projects')), savedProjects);
+});
+
 // Verify isolated copy, replacement, and deletion semantics for every saved result type.
 test('analysis actions preserve result identity, requests, baselines, and unrelated results', async (context) => {
   const setup = await createProjectFixture(context);
@@ -2524,6 +2550,54 @@ test('HTTP prompt viewer exposes saved inputs during and after analysis', async 
   assert.deepEqual(missingSchema.prompts[1], second.prompts[1]);
   await rm(first.directory, { recursive: true });
   assert.deepEqual((await (await fetch(url)).json()).prompts, []);
+});
+
+// Return a missing-project error from every HTTP analysis enqueue endpoint.
+test('HTTP enqueue rejects a missing project without creating a job', async (context) => {
+  const setup = await createProjectFixture(context);
+  const run = context.mock.fn(runFakeAnalysis);
+  const store = new ProjectStore({ ...setup, run });
+  const app = createApp({ store });
+  // Close workers and the HTTP listener before removing the fixture.
+  context.after(async () => {
+    await store.close();
+    app.closeAllConnections();
+    await new Promise(
+      // Wait until the temporary HTTP server releases its listening socket.
+      (resolve) => app.close(resolve),
+    );
+  });
+  await store.add({ path: setup.root, analyze: false });
+  const projects = await store.list();
+  const registryPath = join(setup.dataDirectory, 'projects.json');
+  const registry = await readFile(registryPath, 'utf8');
+  const savedProjects = await readdir(join(setup.dataDirectory, 'projects'));
+  app.listen(0, '127.0.0.1');
+  await once(app, 'listening');
+  const base = `http://127.0.0.1:${app.address().port}`;
+
+  for (const [endpoint, body] of [
+    ['analysis', {}], ['directories', {}],
+    ['architecture', { question: 'Explain main()' }],
+    ['flows', { feature: 'Trace main()' }],
+    ['nouns', { scope: 'src/' }],
+    ['sequences', { question: 'Diagram main()' }],
+  ]) {
+    const response = await fetch(`${base}/api/projects/missing/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 404, endpoint);
+    assert.deepEqual(await response.json(), { error: 'Project not found.' }, endpoint);
+  }
+
+  assert.equal(run.mock.callCount(), 0);
+  assert.deepEqual(store.queue, []);
+  assert.equal(store.running, null);
+  assert.deepEqual(await store.list(), projects);
+  assert.equal(await readFile(registryPath, 'utf8'), registry);
+  assert.deepEqual(await readdir(join(setup.dataDirectory, 'projects')), savedProjects);
 });
 
 // Verify project HTTP APIs, direct routes, and local-origin boundaries.
