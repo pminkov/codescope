@@ -1,6 +1,22 @@
 import { escapeHtml as escape } from '../content.js';
 import { renderIcon } from './icons.js';
 
+// Number a saved analysis by its position in the same list used for navigation.
+export function renderAnalysisLabel(label, analyses, selectedId) {
+  const index = analyses.findIndex(
+    // Match by ID so a refreshed or copied selection retains its list position.
+    (analysis) => analysis.id === selectedId,
+  );
+  const number = index >= 0 ? String(index + 1).padStart(2, '0') : '';
+
+  return /* HTML */ `
+    <div class="eyebrow">
+      ${escape(label)}
+      ${number ? `<span>/</span> ${number}` : ''}
+    </div>
+  `;
+}
+
 // Keep unavailable and incomplete comparisons visible when the header shows a compact count.
 export function renderAnalysisFreshness(review) {
   if (!review?.available)

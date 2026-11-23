@@ -1,6 +1,4 @@
 /* Share the same slide styling between the workspace and offline HTML exports. */
-.presentation-workspace { grid-template-columns: 280px minmax(0, 1fr); }
-.presentation-sidebar { padding: 24px 20px; }
 .presentation-sidebar .flow-composer { margin: 18px 0 24px; }
 .presentation-content { min-width: 0; padding: 28px; }
 .presentation-content .content-heading h2 { margin-bottom: 6px; }
@@ -9,11 +7,8 @@
 .presentation-types { justify-content: center; margin: 24px 0; }
 .presentation-types span { padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px; }
 .presentation-types span { font-size: .85rem; color: var(--green); }
-.presentation-decks { display: grid; gap: 8px; margin-bottom: 30px; }
-.presentation-deck { display: grid; padding: 10px 12px; border: 1px solid transparent; }
-.presentation-deck { color: var(--text); text-decoration: none; border-radius: 6px; }
-.presentation-deck span { color: var(--muted); font-size: .8rem; }
-.presentation-deck.active { background: var(--green-bg); border-color: var(--green-line); }
+.presentation-decks { margin-bottom: 30px; }
+.presentation-decks .flow-option > div { min-width: 0; overflow-wrap: anywhere; }
 .presentation-outline { display: grid; gap: 5px; }
 .presentation-outline button { display: flex; gap: 12px; text-align: left; padding: 10px; }
 .presentation-outline button { background: transparent; color: var(--muted); border: 0; }
@@ -99,13 +94,10 @@
 .deck-export-notes { margin: 0 24px 20px; color: #b8ccc3; }
 .deck-export-notes summary { cursor: pointer; }
 @media (max-width: 1000px) {
-  .presentation-workspace { grid-template-columns: 220px minmax(0, 1fr); }
   .presentation-content { padding: 20px; }
   .presentation-toolbar > span { display: none; }
 }
 @media (max-width: 760px) {
-  .presentation-workspace { display: block; }
-  .presentation-sidebar { border-bottom: 1px solid var(--border); }
   .presentation-outline { max-height: 180px; overflow: auto; }
   .presentation-content { padding: 14px; }
   .presentation-stage:fullscreen, .presentation-stage.is-presenting { padding: 0; }

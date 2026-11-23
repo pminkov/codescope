@@ -4,6 +4,7 @@ import { renderSourceDisclosure } from '../ui/source-links.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
+  renderAnalysisLabel,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
@@ -51,9 +52,7 @@ function renderArchitectureNavigation(views, selected, { draft, busy, projectUrl
     <aside class="sidebar architecture-sidebar" aria-label="Architecture navigation">
       <div class="sidebar-heading">
         <h2>Architecture views</h2>
-        <span class="tiny-label">
-          ${views.length} ${views.length === 1 ? 'DIAGRAM' : 'DIAGRAMS'}
-        </span>
+        <span class="tiny-label">${views.length} SAVED</span>
       </div>
       <p class="sidebar-description">Explore the whole system or focus on a smaller part.</p>
       <form id="architecture-form" class="flow-composer">
@@ -67,7 +66,9 @@ function renderArchitectureNavigation(views, selected, { draft, busy, projectUrl
           required: true,
         })}
         <p class="composer-hint">Each question adds a saved, source-linked diagram.</p>
-        <button class="button" type="submit" ${busy ? 'disabled' : ''}>Generate diagram</button>
+        <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
+          Generate diagram
+        </button>
         <p class="architecture-error flow-error" role="alert"></p>
       </form>
       <div class="flow-options">
@@ -160,11 +161,7 @@ export function renderArchitectureView(project, graph, { draft, projectUrl, acti
       <article class="architecture-content">
         <div class="content-heading">
           <div>
-            <div class="eyebrow">
-              ARCHITECTURE
-              <span>/</span>
-              ${String(views.indexOf(graph) + 1).padStart(2, '0')} OF ${views.length}
-            </div>
+            ${renderAnalysisLabel('ARCHITECTURE', views, graph.id)}
             <h2>${escape(graph.title)}</h2>
             <p class="lead">${formatText(graph.description)}</p>
             ${renderSourceDisclosure(graph.sources)}

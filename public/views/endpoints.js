@@ -62,7 +62,7 @@ function renderEndpointsContent(project, selected, actionsBusy) {
       Each endpoint includes its method, path, behavior, and links to the source.
     </p>
     <button
-      class="button"
+      class="button analysis-generate"
       type="button"
       data-action="endpoints"
       ${actionsBusy ? 'disabled' : ''}

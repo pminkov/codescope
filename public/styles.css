@@ -591,6 +591,15 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 .flow-composer label { display: block; color: var(--text); font-size: 1rem; margin-bottom: 9px; }
 .flow-composer textarea { width: 100%; padding: 10px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 5px; resize: vertical; font: inherit; line-height: 1.6; font-family: inherit; font-size: 1rem; }
 .flow-composer .button { margin-top: 8px; }
+/* Give every analysis generation control the same full-width green treatment. */
+.button.analysis-generate {
+  margin-top: 14px;
+  width: 100%;
+  justify-content: center;
+  background: var(--green-bg);
+  color: var(--green);
+}
+.button.analysis-generate:hover:enabled { border-color: var(--green-line); }
 .flow-error { color: var(--amber); font-size: 0.875rem; }
 #modification-prompt { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--input); color: var(--text); font: inherit; line-height: 1.6; resize: vertical; }
 .flow-sidebar .sidebar-description { margin-bottom: 20px; }
@@ -742,14 +751,6 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 .sequence-sidebar .flow-composer { margin-top: 24px; }
 .sequence-sidebar .flow-composer label { color: var(--muted); }
 .sequence-sidebar .flow-composer textarea { display: block; }
-.sequence-sidebar .flow-composer .button {
-  margin-top: 14px;
-  width: 100%;
-  justify-content: center;
-  background: var(--green-bg);
-  color: var(--green);
-}
-.sequence-sidebar .flow-composer .button:hover:enabled { border-color: var(--green-line); }
 .sequence-saved-heading {
   margin: 0 0 8px;
   color: var(--muted);

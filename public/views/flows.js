@@ -4,6 +4,7 @@ import { renderSourceButton, renderSourceDisclosure } from '../ui/source-links.j
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
+  renderAnalysisLabel,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
@@ -144,7 +145,9 @@ function renderFlowComposer(draft, busy) {
         busy,
         required: true,
       })}
-      <button class="button" type="submit" ${busy ? 'disabled' : ''}>Trace flow</button>
+      <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
+        Trace flow
+      </button>
       <p class="flow-error" role="alert"></p>
     </form>
   `;
@@ -196,7 +199,7 @@ export function renderFlowsView(
       <aside class="sidebar flow-sidebar" aria-label="Code flow navigation">
         <div class="sidebar-heading">
           <h2>Code flows</h2>
-          <span class="tiny-label">${project.flows.length} FLOWS</span>
+          <span class="tiny-label">${project.flows.length} SAVED</span>
         </div>
         <p class="sidebar-description">From a user action to the code that makes it happen.</p>
         ${renderFlowComposer(draft, busy)}
@@ -220,11 +223,7 @@ export function renderFlowsView(
       <article class="flow-content">
         <div class="content-heading">
           <div>
-            <div class="eyebrow">
-              CODE FLOW
-              <span>/</span>
-              0${project.flows.indexOf(selected) + 1}
-            </div>
+            ${renderAnalysisLabel('CODE FLOW', project.flows, selected.id)}
             <h2>${escape(selected.title)}</h2>
             <p class="lead">${formatText(selected.description)}</p>
           </div>

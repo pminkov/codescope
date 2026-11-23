@@ -4,6 +4,7 @@ import { renderSourceDisclosure } from '../ui/source-links.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
+  renderAnalysisLabel,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 import { renderSequenceDiagram, renderSequenceZoomControls } from '../sequence-diagram.js';
@@ -81,7 +82,9 @@ export function renderSequencesView(project, selected, { draft, projectUrl, acti
           busy,
           required: true,
         })}
-        <button class="button" type="submit" ${busy ? 'disabled' : ''}>Generate sequence</button>
+        <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
+          Generate sequence
+        </button>
         <p class="flow-error" role="alert"></p>
       </form>
       ${analyses.length ? '<h3 class="sequence-saved-heading">Saved diagrams</h3>' : ''}
@@ -121,7 +124,7 @@ export function renderSequencesView(project, selected, { draft, projectUrl, acti
     content = /* HTML */ `
       <div class="content-heading">
         <div>
-          <span class="eyebrow">SEQUENCE ANALYSIS</span>
+          ${renderAnalysisLabel('SEQUENCE ANALYSIS', analyses, selected.id)}
           <h2>${escape(selected.title)}</h2>
           <p class="lead">${formatText(selected.description)}</p>
           ${renderSourceDisclosure(selected.sources)}

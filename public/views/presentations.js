@@ -1,9 +1,11 @@
 import { escapeHtml as escape, formatText } from '../content.js';
+import { renderIcon } from '../ui/icons.js';
 import { renderPresentationDiagram } from '../ui/presentation-diagram.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
+  renderAnalysisLabel,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
@@ -16,7 +18,7 @@ function renderPresentationComposer(draft, busy) {
         id: 'presentation-topic', rows: 4, required: true, draft, busy,
         placeholder: 'Explain how this project processes a request, from start to finish.',
       })}
-      <button class="button primary" type="submit" ${busy ? 'disabled' : ''}>
+      <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
         Create presentation
       </button>
       <p class="flow-error" role="alert"></p>
@@ -91,19 +93,26 @@ export function renderPresentationsView(project, selected, {
   return /* HTML */ `
     <div class="workspace presentation-workspace">
       <aside class="sidebar presentation-sidebar" aria-label="Presentation navigation">
-        <div class="sidebar-heading"><h2>Presentations</h2></div>
+        <div class="sidebar-heading">
+          <h2>Presentations</h2>
+          <span class="tiny-label">${project.presentations.length} SAVED</span>
+        </div>
         ${renderPresentationComposer(draft, busy)}
-        <nav class="presentation-decks" aria-label="Saved presentations">
+        <nav class="flow-options presentation-decks" aria-label="Saved presentations">
           ${project.presentations.map(
             // Keep every saved deck independently addressable and selectable.
-            (deck) => /* HTML */ `
+            (deck, index) => /* HTML */ `
               <a
                 href="${projectUrl('presentations', deck.id)}"
-                class="presentation-deck ${deck.id === selected.id ? 'active' : ''}"
+                class="flow-option ${deck.id === selected.id ? 'active' : ''}"
                 ${deck.id === selected.id ? 'aria-current="page"' : ''}
               >
-                <strong>${escape(deck.title)}</strong>
-                <span>${deck.slides.length} slides</span>
+                <span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <strong>${escape(deck.title)}</strong>
+                  <p>${deck.slides.length} slides</p>
+                </div>
+                ${renderIcon('arrow')}
               </a>
             `,
           ).join('')}
@@ -127,7 +136,7 @@ export function renderPresentationsView(project, selected, {
       <section class="presentation-content">
         <div class="content-heading">
           <div>
-            <span class="eyebrow">PRESENTATION</span>
+            ${renderAnalysisLabel('PRESENTATION', project.presentations, selected.id)}
             <h2>${escape(selected.title)}</h2>
             <p>${formatText(selected.description)}</p>
           </div>

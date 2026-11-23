@@ -4,6 +4,7 @@ import { renderSourceDisclosure } from '../ui/source-links.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
+  renderAnalysisLabel,
   renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
@@ -157,7 +158,9 @@ function renderNounsNavigation(analyses, selected, { draft, busy, projectUrl }) 
         <p class="composer-hint">
           Leave blank for the whole project. Each run saves a separate analysis.
         </p>
-        <button class="button" type="submit" ${busy ? 'disabled' : ''}>Analyze nouns</button>
+        <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
+          Analyze nouns
+        </button>
         <p class="flow-error" role="alert"></p>
       </form>
       <div class="flow-options">
@@ -178,7 +181,7 @@ function renderNounsContent(project, selected, { busy, actionsBusy }) {
     ? /* HTML */ `
         <div class="content-heading">
           <div>
-            <span class="eyebrow">NOUNS</span>
+            ${renderAnalysisLabel('NOUNS', project.nounAnalyses || [], selected.id)}
             <h2>${escape(selected.title)}</h2>
             <p class="lead">${formatText(selected.description)}</p>
             ${renderSourceDisclosure(selected.sources)}
