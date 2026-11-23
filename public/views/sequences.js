@@ -141,12 +141,7 @@ export function renderSequencesView(project, selected, { draft, projectUrl, acti
           ? /* HTML */ `
               <figure class="sequence-figure">
                 <figcaption>
-                  <strong>Read from top to bottom</strong>
                   <span>Solid: call · Dashed: reply · Open arrow: async · Amber: inferred</span>
-                  <span>
-                    Drag blank space to pan. Select a participant or message to open its details and
-                    sources. Fit to width shows all participants.
-                  </span>
                   ${renderSequenceZoomControls()}
                 </figcaption>
                 <div
