@@ -737,6 +737,11 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 
 /* Sequence lifelines keep their reading size inside a keyboard-scrollable canvas. */
 .sequence-content h2 { margin: 9px 0 14px; font-size: 1.75rem; font-weight: 550; overflow-wrap: anywhere; }
+/* Align the request form with its heading and give each control room to breathe. */
+.sequence-sidebar .sidebar-heading { padding: 0; }
+.sequence-sidebar .flow-composer { margin-top: 24px; }
+.sequence-sidebar .flow-composer textarea { display: block; }
+.sequence-sidebar .flow-composer .button { margin-top: 14px; }
 .sequence-sidebar .flow-options { flex-direction: column; }
 .sequence-sidebar .flow-option p { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .sequence-figure { margin: 24px 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }

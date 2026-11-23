@@ -71,7 +71,6 @@ export function renderSequencesView(project, selected, { draft, projectUrl, acti
         <h2>Sequence diagrams</h2>
         <span class="tiny-label">${analyses.length} SAVED</span>
       </div>
-      <p class="sidebar-description">Who calls whom, in what order, and what happens next.</p>
       <form id="sequence-form" class="flow-composer">
         <label for="sequence-question">Describe an interaction</label>
         ${renderAnalysisTextarea({
@@ -82,7 +81,6 @@ export function renderSequencesView(project, selected, { draft, projectUrl, acti
           busy,
           required: true,
         })}
-        <p class="composer-hint">Each request saves a separate diagram with source links.</p>
         <button class="button" type="submit" ${busy ? 'disabled' : ''}>Generate sequence</button>
         <p class="flow-error" role="alert"></p>
       </form>
