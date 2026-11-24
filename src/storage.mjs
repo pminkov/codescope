@@ -29,6 +29,7 @@ const createEmptyUnderstanding = () => ({
   architectures: [],
   flows: [],
   nounAnalyses: [],
+  areaAnalyses: [],
   sequences: [],
   endpointAnalyses: [],
   presentations: [],
@@ -42,6 +43,7 @@ const analysisTypes = {
   architecture: { collection: 'architectures', stage: 'architecture', request: 'requestedQuestion' },
   flows: { collection: 'flows', stage: 'flow', request: 'requestedFeature' },
   nouns: { collection: 'nounAnalyses', stage: 'nouns', request: 'requestedScope' },
+  areas: { collection: 'areaAnalyses', stage: 'areas', request: 'requestedScope' },
   sequences: { collection: 'sequences', stage: 'sequence', request: 'requestedQuestion' },
   endpoints: { collection: 'endpointAnalyses', stage: 'endpoints', request: null },
   presentations: { collection: 'presentations', stage: 'presentation', request: 'requestedTopic' },
@@ -63,7 +65,8 @@ function locateSavedAnalysis(understanding, kind, id) {
 
 // Recover the original question, including older results without request metadata.
 function savedAnalysisRequest(kind, analysis) {
-  if (['directories', 'endpoints'].includes(kind) || kind === 'nouns' && !analysis.requestedScope)
+  if (['directories', 'endpoints'].includes(kind) ||
+    ['nouns', 'areas'].includes(kind) && !analysis.requestedScope)
     return null;
   if (kind === 'architecture' && (analysis.id === 'overview' || analysis.requestedQuestion === null))
     return null;
@@ -201,9 +204,10 @@ function mergeStageResult(understanding, result, stage, job, index, snapshot) {
       requestedQuestion: job.feature,
       createdAt: timestamp,
     });
-  } else if (stage === 'nouns') {
+  } else if (['nouns', 'areas'].includes(stage)) {
     key = randomUUID();
-    (understanding.nounAnalyses ||= []).push({
+    const collection = stage === 'areas' ? 'areaAnalyses' : 'nounAnalyses';
+    (understanding[collection] ||= []).push({
       ...analysis,
       id: key,
       requestedScope: job.feature,
@@ -432,7 +436,8 @@ export class ProjectStore {
     try {
       const files = await readdir(directory);
       const stages = [
-        'directories', 'architecture', 'flow', 'nouns', 'sequence', 'endpoints', 'presentation',
+        'directories', 'architecture', 'flow', 'nouns', 'areas', 'sequence', 'endpoints',
+        'presentation',
       ];
       for (const stage of stages) {
         const filename = `${stage}.prompt.txt`;
@@ -494,8 +499,8 @@ export class ProjectStore {
   // Validate and persist a new job before adding it to the worker queue.
   async enqueue(id, kind = 'initial', feature) {
     const project = await this.get(id);
-    if (!['initial', 'directories', 'flow', 'architecture', 'nouns', 'sequence', 'endpoints',
-      'presentation']
+    if (!['initial', 'directories', 'flow', 'architecture', 'nouns', 'areas', 'sequence',
+      'endpoints', 'presentation']
       .includes(kind))
       throw fail('Unknown analysis job kind.');
     if (this.edits.has(id)) throw fail('A diagram edit is being saved. Try again shortly.', 409);
@@ -518,7 +523,7 @@ export class ProjectStore {
     )
       throw fail('Describe a sequence in 1–4,000 characters.');
     if (
-      kind === 'nouns' &&
+      ['nouns', 'areas'].includes(kind) &&
       feature !== undefined &&
       (typeof feature !== 'string' || feature.length > 4000)
     )
@@ -537,7 +542,7 @@ export class ProjectStore {
     const job = {
       id: randomUUID(),
       kind,
-      feature: ['flow', 'architecture', 'nouns', 'sequence', 'presentation'].includes(kind)
+      feature: ['flow', 'architecture', 'nouns', 'areas', 'sequence', 'presentation'].includes(kind)
         ? feature?.trim() || null : null,
       status: 'queued',
       stage: 'queued',
@@ -716,7 +721,7 @@ export class ProjectStore {
         index,
         directory,
         signal,
-        ['nouns', 'sequence', 'presentation'].includes(job.kind) ? job.feature || '' : '',
+        ['nouns', 'areas', 'sequence', 'presentation'].includes(job.kind) ? job.feature || '' : '',
       );
       await this.updateJob(job, { coverage: snapshot.coverage });
       await this.runAnalysisStages(project, job, index, snapshot, directory, signal);
@@ -752,7 +757,7 @@ export class ProjectStore {
     const stages =
       {
         directories: ['directories'], flow: ['flow'], architecture: ['architecture'],
-        nouns: ['nouns'], sequence: ['sequence'], endpoints: ['endpoints'],
+        areas: ['areas'], nouns: ['nouns'], sequence: ['sequence'], endpoints: ['endpoints'],
         presentation: ['presentation'],
       }[job.kind] ||
       ['directories', 'architecture'];
@@ -778,11 +783,13 @@ export class ProjectStore {
                     : 'Building the system architecture…'
                   : stage === 'sequence'
                     ? 'Tracing interactions for the sequence diagram…'
-                    : stage === 'nouns'
-                      ? 'Identifying nouns and their relationships…'
-                      : stage === 'endpoints'
-                        ? 'Finding servers and REST endpoints…'
-                        : 'Tracing the requested code flow…',
+                    : stage === 'areas'
+                      ? 'Mapping responsibilities into nested areas…'
+                      : stage === 'nouns'
+                        ? 'Identifying nouns and their relationships…'
+                        : stage === 'endpoints'
+                          ? 'Finding servers and REST endpoints…'
+                          : 'Tracing the requested code flow…',
       });
       let lastProgress = 0;
       const result = await analyzeStage({

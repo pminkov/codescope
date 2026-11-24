@@ -9,6 +9,7 @@ import {
 } from './views/directories.js';
 import { renderFlowsView } from './views/flows.js';
 import { renderNounsView, renderNounDetails } from './views/nouns.js';
+import { renderAreasView } from './views/areas.js';
 import { renderEndpointsView } from './views/endpoints.js';
 import { renderSequencesView, renderSequenceDetails } from './views/sequences.js';
 import {
@@ -67,6 +68,7 @@ let analysisActionPending = false;
 const flowDrafts = new Map();
 const architectureDrafts = new Map();
 const nounsDrafts = new Map();
+const areasDrafts = new Map();
 const sequenceDrafts = new Map();
 const presentationDrafts = new Map();
 const presentationSlides = new Map();
@@ -75,6 +77,7 @@ const projectTabs = [
   'directories',
   'code-scan',
   'architecture',
+  'areas',
   'flows',
   'nouns',
   'sequences',
@@ -86,6 +89,7 @@ const analysisForms = {
   'flow-form': { action: 'flows', field: 'feature', drafts: flowDrafts },
   'architecture-form': { action: 'architecture', field: 'question', drafts: architectureDrafts },
   'sequence-form': { action: 'sequences', field: 'question', drafts: sequenceDrafts },
+  'areas-form': { action: 'areas', field: 'scope', drafts: areasDrafts },
   'nouns-form': { action: 'nouns', field: 'scope', drafts: nounsDrafts },
   'presentation-form': { action: 'presentations', field: 'topic', drafts: presentationDrafts },
 };
@@ -95,6 +99,7 @@ const jobTypeLabels = {
   architecture: 'Architecture',
   flow: 'Code flow',
   nouns: 'Nouns',
+  areas: 'Areas',
   sequence: 'Sequence diagram',
   endpoints: 'Endpoints',
   presentation: 'Presentation',
@@ -108,6 +113,7 @@ function currentAskContext() {
   const { tab, selection } = currentRoute();
   let selected;
   if (tab === 'architecture') selected = getSelectedArchitecture();
+  else if (tab === 'areas') selected = getSelectedAreasAnalysis();
   else if (tab === 'nouns') selected = getSelectedNounsAnalysis();
   else if (tab === 'endpoints') selected = getSelectedEndpointsAnalysis();
   else if (tab === 'sequences') selected = getSelectedSequence();
@@ -136,6 +142,7 @@ function currentAskContext() {
     architecture: 'Architecture',
     flows: 'Code flows',
     nouns: 'Nouns',
+    areas: 'Areas',
     sequences: 'Sequences',
     endpoints: 'Endpoints',
     presentations: 'Presentation',
@@ -143,16 +150,20 @@ function currentAskContext() {
   };
   const detailDialog = dialogStack.latestDialog();
   const detail = detailDialog?.querySelector('h2')?.textContent;
+  const area = tab === 'areas' ? selected?.areas.find(
+    // Keep Ask focused on the same responsibility as the visible drill-down level.
+    (entry) => entry.id === selection.split('/')[1],
+  ) : null;
   const title = selected?.title || selected?.path || labels[tab];
 
   const contextLabel = `${data.name} · ${labels[tab]}`;
   const selectionLabel = title !== labels[tab] ? ` · ${title}` : '';
-  const detailLabel = detail ? ` · ${detail}` : '';
+  const detailLabel = detail || area ? ` · ${detail || area.name}` : '';
 
   return {
     projectId: data.id,
     view: tab,
-    selection: selected?.id ?? selected?.path ?? '',
+    selection: area ? `${selected.id}/${area.id}` : selected?.id ?? selected?.path ?? '',
     label: `${contextLabel}${selectionLabel}${detailLabel}`.slice(0, 500),
   };
 }
@@ -201,6 +212,8 @@ async function navigate(url, replace = false) {
   if (replace) history.replaceState(null, '', url);
   else if (url !== location.pathname) history.pushState(null, '', url);
   await loadCurrentProject();
+  if (currentRoute().tab === 'areas')
+    selectElement('.area-breadcrumb [aria-current="page"]')?.focus({ preventScroll: true });
 }
 
 // Apply the chosen theme and remember the browser preference.
@@ -235,6 +248,7 @@ selectElement('#theme-toggle').addEventListener('click', () =>
 function getSelectedAnalysisReview() {
   const { tab, selection } = currentRoute();
   if (tab === 'architecture') return getSelectedArchitecture();
+  if (tab === 'areas') return getSelectedAreasAnalysis();
   if (['flows', 'nouns', 'sequences', 'endpoints', 'presentations'].includes(tab)) {
     const analyses = ({
       flows: data.flows, nouns: data.nounAnalyses, sequences: data.sequences,
@@ -435,6 +449,27 @@ function getAnalysisRequest(kind, drafts) {
   const suggestion = data.nextPrompts?.[kind];
 
   return typeof suggestion === 'string' ? suggestion : '';
+}
+
+// Resolve a saved map independently of its selected nested area.
+function getSelectedAreasAnalysis() {
+  const id = currentRoute().selection.split('/')[0];
+  const analyses = data?.areaAnalyses || [];
+
+  return analyses.find(
+    // The first selection segment identifies the saved map; the second identifies a box.
+    (analysis) => analysis.id === id,
+  ) || analyses[0];
+}
+
+// Render only the selected map level while keeping its hierarchy in the URL.
+function renderAreas() {
+  selectElement('#view').innerHTML = renderAreasView(data, getSelectedAreasAnalysis(), {
+    draft: areasDrafts.get(data.id) || '',
+    areaId: currentRoute().selection.split('/')[1] || '',
+    projectUrl,
+    actionsBusy: isAnalysisBusy(),
+  });
 }
 
 // Resolve the active nouns analysis consistently for cards and their detail dialog.
@@ -823,6 +858,7 @@ function render() {
 
   if (tab === 'flows') renderFlows();
   else if (tab === 'architecture') renderArchitecture();
+  else if (tab === 'areas') renderAreas();
   else if (tab === 'nouns') renderNouns();
   else if (tab === 'endpoints') renderEndpoints();
   else if (tab === 'sequences') renderSequences();
@@ -1073,6 +1109,7 @@ function updateHeader() {
     `;
   selectElement('#flow-count').textContent = data.flows.length;
   selectElement('#architecture-count').textContent = getArchitectureViews().length;
+  selectElement('#areas-count').textContent = (data.areaAnalyses || []).length;
   selectElement('#nouns-count').textContent = (data.nounAnalyses || []).length;
   selectElement('#sequences-count').textContent = (data.sequences || []).length;
   selectElement('#presentations-count').textContent = (data.presentations || []).length;
@@ -1174,7 +1211,7 @@ async function loadCurrentProject({ quiet = false } = {}) {
       previous.job?.id === next.job?.id &&
       ['queued', 'running'].includes(previous.job?.status) &&
       next.job?.status === 'completed' &&
-      ['architecture', 'nouns', 'sequence', 'presentation'].includes(next.job.kind) &&
+      ['architecture', 'areas', 'nouns', 'sequence', 'presentation'].includes(next.job.kind) &&
       next.job.resultId &&
       !next.job.analysisId &&
       currentRoute().tab === (jobTabs[next.job.kind] || next.job.kind)
@@ -1212,7 +1249,8 @@ function confirmProjectDeletion() {
   selectElement('#action-title').textContent = 'Delete project?';
   selectElement('#action-description').textContent =
     `Delete “${data.name}” from CodeScope? This removes its saved explanations, diagrams, ` +
-    'flows, noun and endpoint analyses, sequences, presentations, and debugging job history. ' +
+    'flows, areas, noun and endpoint analyses, sequences, presentations, ' +
+    'and debugging job history. ' +
     'This cannot be undone.';
   selectElement('#action-usage').textContent =
     'Any queued or running analysis for this project will be stopped.';
@@ -1238,6 +1276,7 @@ function analysisTitle(kind, id) {
   const collections = {
     architecture: data.architectures,
     flows: data.flows,
+    areas: data.areaAnalyses,
     nouns: data.nounAnalyses,
     sequences: data.sequences,
     endpoints: data.endpointAnalyses,
@@ -1385,7 +1424,8 @@ async function runAction(action) {
                 ? 'sequences'
                 : job.kind === 'flow'
                   ? 'flows'
-                  : ['architecture', 'nouns', 'endpoints', 'directories'].includes(job.kind)
+                  : ['architecture', 'areas', 'nouns', 'endpoints', 'directories']
+                    .includes(job.kind)
                     ? job.kind
                     : 'analysis',
             ),
@@ -1395,7 +1435,7 @@ async function runAction(action) {
             ? { feature: job.feature }
             : ['architecture', 'sequence'].includes(job.kind)
               ? { question: job.feature }
-              : job.kind === 'nouns'
+              : ['nouns', 'areas'].includes(job.kind)
                 ? { scope: job.feature || '' }
                 : {},
       );
@@ -1427,6 +1467,7 @@ async function deleteCurrentProject(id) {
     flowDrafts.delete(id);
     architectureDrafts.delete(id);
     nounsDrafts.delete(id);
+    areasDrafts.delete(id);
     sequenceDrafts.delete(id);
     presentationDrafts.delete(id);
     await loadProjects();
@@ -1489,6 +1530,7 @@ function renderEmptyWorkspace() {
     'flow-count',
     'architecture-count',
     'nouns-count',
+    'areas-count',
     'sequences-count',
     'presentations-count',
     'all-count',
@@ -2099,6 +2141,7 @@ document.addEventListener('input', (event) => {
   if (event.target.id === 'architecture-question')
     architectureDrafts.set(data.id, event.target.value);
   if (event.target.id === 'sequence-question') sequenceDrafts.set(data.id, event.target.value);
+  if (event.target.id === 'areas-scope') areasDrafts.set(data.id, event.target.value);
   if (event.target.id === 'nouns-scope') nounsDrafts.set(data.id, event.target.value);
   if (event.target.id === 'presentation-topic')
     presentationDrafts.set(data.id, event.target.value);
@@ -2110,7 +2153,7 @@ document.addEventListener('submit', async (event) => {
   event.preventDefault();
   const projectId = data.id;
   const feature = event.target.querySelector('textarea').value.trim();
-  if (!feature && form.action !== 'nouns') return;
+  if (!feature && !['nouns', 'areas'].includes(form.action)) return;
   event.target.querySelector('button').disabled = true;
 
   try {

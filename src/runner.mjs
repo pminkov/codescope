@@ -131,6 +131,7 @@ function analysisHistory(understanding) {
   const groups = {
     architecture: understanding.architectures || [],
     nouns: understanding.nounAnalyses || [],
+    areas: understanding.areaAnalyses || [],
     flows: understanding.flows || [],
     sequences: understanding.sequences || [],
     endpoints: (understanding.endpointAnalyses || []).slice(-1),
@@ -153,6 +154,23 @@ function analysisHistory(understanding) {
 // Describe the requested analysis, source evidence, and next questions to suggest.
 export function analysisPrompt(stage, project, index, snapshot, feature, understanding = {}, revision) {
   const purpose = {
+    areas: [
+      `Partition ${feature ? `this scope: ${JSON.stringify(feature)}` : 'the whole project'}`,
+      'into a small hierarchy of areas, grouped by responsibility rather than folders.',
+      'Areas include user-facing capabilities, backend services, storage, infrastructure,',
+      'and development tooling when present. They do not have to be product features.',
+      'Aim for 2–10 top-level boxes. Break each substantial area into 2–10 smaller areas.',
+      'Use at most three levels and 100 areas total. Stop at cohesive responsibilities;',
+      'do not invent subdivisions to fill space. A tiny project can have a single root.',
+      'Return a flat areas array with globally unique IDs. Root parentId is null;',
+      'every other parentId references an area in this result. No cycles or orphans.',
+      'Sibling areas partition their parent without duplicating responsibilities.',
+      'Use concise names and plain-language descriptions explaining what each area does',
+      'and how its pieces fit together. Cite implementation evidence for every area.',
+      'Cover the actual scope, including supporting systems, without assuming absent',
+      'services. If the requested scope is absent or no evidence is available, return',
+      'an empty areas array and explain what you inspected in the description and notes.',
+    ].join(' '),
     presentation: [
       `Create a presentation about this topic: ${JSON.stringify(feature)}.`,
       'Explain this project using 5–10 concise slides (3–14 when appropriate).',
@@ -349,6 +367,35 @@ export function validateAnalysis(stage, value, index, snapshot) {
         ),
     );
     if (new Set(ids).size !== ids.length) throw new Error('Flow step IDs must be unique.');
+  }
+
+  if (stage === 'areas') {
+    const nodes = new Map(value.areas.map(
+      // Parent references use global IDs so every box has one unambiguous location.
+      (area) => [area.id, area],
+    ));
+    if (nodes.size !== value.areas.length) throw new Error('Area IDs must be unique.');
+    const siblings = new Map();
+
+    for (const area of value.areas) {
+      if (area.parentId !== null && !nodes.has(area.parentId))
+        throw new Error('Area points to an unknown parent.');
+      siblings.set(area.parentId, (siblings.get(area.parentId) || 0) + 1);
+      const visited = new Set();
+      let current = area;
+
+      // Walking every ancestry also rejects detached cycles with no root node.
+      while (current) {
+        if (visited.has(current.id)) throw new Error('Areas cannot contain cycles.');
+        visited.add(current.id);
+        if (visited.size > 3) throw new Error('Areas support at most three levels.');
+        current = nodes.get(current.parentId);
+      }
+    }
+
+    for (const [parent, count] of siblings)
+      if (count > 10 || parent !== null && count < 2)
+        throw new Error('Area breakdowns need 2–10 boxes, or one root for a tiny project.');
   }
 
   if (stage === 'nouns') {

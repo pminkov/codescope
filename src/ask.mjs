@@ -7,7 +7,7 @@ import { validateSchema } from './schemas.mjs';
 
 const views = [
   'directories', 'code-scan', 'architecture', 'flows', 'nouns', 'sequences', 'endpoints',
-  'presentations', 'all',
+  'presentations', 'areas', 'all',
 ];
 export const answerSchema = {
   type: 'object', additionalProperties: false, required: ['answer', 'references'],
@@ -75,6 +75,25 @@ export function validateQuestion(body) {
 
 // Resolve the displayed result using server-owned data instead of supplied analysis text.
 export function selectedAskContext(view, context) {
+  if (context.view === 'areas') {
+    const [analysisId, areaId] = context.selection.split('/');
+    const analyses = view.areaAnalyses || [];
+    const analysis = analyses.find(
+      // Nested area URLs retain the containing map as the source of truth.
+      (entry) => entry.id === analysisId,
+    ) || (!analysisId ? analyses[0] : null);
+    if (!analysis && context.selection) throw fail('The selected analysis no longer exists.', 404);
+    if (!analysis) return null;
+    const selectedArea = analysis.areas.find(
+      // Include the current box so follow-up questions can refer to this responsibility.
+      (area) => area.id === areaId,
+    );
+    if (areaId && !selectedArea) throw fail('The selected area no longer exists.', 404);
+    const { review, ...content } = analysis;
+
+    return { ...content, selectedArea: selectedArea || null };
+  }
+
   const collection = {
     architecture: view.architectures, flows: view.flows,
     nouns: view.nounAnalyses, sequences: view.sequences,

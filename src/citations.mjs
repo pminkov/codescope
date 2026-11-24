@@ -14,6 +14,7 @@ const protectedFields = new Set([
   'path',
   'entry',
   'id',
+  'parentId',
   'hash',
   'from',
   'to',

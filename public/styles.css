@@ -304,7 +304,14 @@ kbd { color: var(--faint); border: 1px solid var(--border); border-radius: 3px; 
 .flow-option { display: flex; align-items: flex-start; gap: 12px; padding: 15px 12px; border: 1px solid var(--border); border-radius: 6px; }
 .flow-option:hover { background: var(--hover); }
 .flow-option.active { background: var(--green-bg); border-color: var(--green-line); }
-.flow-option-number { color: var(--faint); font: 1rem ui-monospace, monospace; padding-top: 3px; }
+.flow-option-number {
+  flex: 0 0 auto;
+  min-width: 2ch;
+  white-space: nowrap;
+  color: var(--faint);
+  font: 1rem ui-monospace, monospace;
+  padding-top: 3px;
+}
 .flow-option.active .flow-option-number, .flow-option.active strong { color: var(--green); }
 .flow-option strong { font-size: 1rem; font-weight: 550; }
 .flow-option p { color: var(--muted); font-size: 0.875rem; margin: 5px 0 10px; line-height: 1.8; }
@@ -707,6 +714,82 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 .node-direction { min-width: 34px; font-size: .8125rem; color: var(--faint); }
 .node-relationships strong { font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; }
 @media (max-width: 800px) { .node-dialog-body { padding: 0 16px 20px; } }
+
+/* Areas reveal one level of a responsibility hierarchy at a time. */
+.areas-content h2 {
+  margin: 9px 0 14px;
+  font-size: 1.75rem;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.area-level-hint {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.areas-sidebar .flow-option { overflow-wrap: anywhere; }
+.areas-sidebar .flow-option > div { flex: 1; min-width: 0; }
+.area-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 24px 0;
+  border: 1px solid var(--green-line);
+  border-radius: 8px;
+  background: var(--green-bg);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.area-breadcrumb a { padding: 5px 8px; border-radius: 4px; color: var(--text); }
+.area-breadcrumb a:hover { background: var(--hover); color: var(--green); }
+.area-breadcrumb [aria-current] {
+  background: var(--panel);
+  color: var(--green);
+  font-weight: 600;
+}
+.area-breadcrumb .icon { width: 14px; height: 14px; color: var(--green); }
+.area-detail { margin-bottom: 24px; overflow-wrap: anywhere; }
+.area-detail h3, #area-level-title { margin: 0 0 10px; font-size: 1.25rem; font-weight: 550; }
+.area-detail p { color: var(--muted); line-height: 1.75; }
+.area-level-hint { margin: 0 0 18px; font-size: .875rem; }
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.area-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+  overflow-wrap: anywhere;
+  transition: border-color .15s, background .15s;
+}
+.area-card:hover { border-color: var(--green-line); background: var(--panel-raised); }
+.area-card-link { display: flex; flex-direction: column; flex: 1; padding: 22px; }
+.area-card-icon { color: var(--green); margin-bottom: 18px; }
+.area-card-icon .icon { width: 24px; height: 24px; }
+.area-card h3 { margin: 0 0 10px; font-size: 1.125rem; font-weight: 550; }
+.area-card p { margin: 0 0 22px; color: var(--muted); line-height: 1.75; }
+.area-card-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  color: var(--green);
+  font-size: .875rem;
+}
+.area-card > .source-disclosure { margin: 0 22px 18px; }
+@media (min-width: 1400px) {
+  .area-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1150px) and (min-width: 801px), (max-width: 540px) {
+  .area-grid { grid-template-columns: 1fr; }
+}
 
 /* Nouns analyses keep each requested scope and its source-backed concepts together. */
 .nouns-content h2 { margin: 9px 0 14px; font-size: 1.75rem; font-weight: 550; overflow-wrap: anywhere; }

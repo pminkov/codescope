@@ -27,6 +27,7 @@ const assets = {
   '/views/directories.js': ['views/directories.js', 'text/javascript'],
   '/views/flows.js': ['views/flows.js', 'text/javascript'],
   '/views/architecture.js': ['views/architecture.js', 'text/javascript'],
+  '/views/areas.js': ['views/areas.js', 'text/javascript'],
   '/views/nouns.js': ['views/nouns.js', 'text/javascript'],
   '/views/endpoints.js': ['views/endpoints.js', 'text/javascript'],
   '/views/sequences.js': ['views/sequences.js', 'text/javascript'],
@@ -40,7 +41,8 @@ const assets = {
 };
 const pageRoute = new RegExp(
   '^/(?:projects/[a-zA-Z0-9_-]+/)?' +
-  '(?:flows|directories|architecture|nouns|sequences|endpoints|presentations|code-scan|all)(?:/|$)',
+  '(?:flows|directories|architecture|areas|nouns|sequences|endpoints|' +
+  'presentations|code-scan|all)(?:/|$)',
 );
 
 // Read a bounded JSON object from a mutation request.
@@ -119,8 +121,8 @@ async function handleProjectRequest(request, url, match, store, json) {
     return json(await store.deleteProject(id));
   }
 
-  if (['analysis', 'directories', 'flows', 'architecture', 'nouns', 'sequences', 'endpoints',
-    'presentations', 'cancel'].includes(action)) {
+  if (['analysis', 'directories', 'flows', 'architecture', 'areas', 'nouns', 'sequences',
+    'endpoints', 'presentations', 'cancel'].includes(action)) {
     if (request.method !== 'POST') throw fail('Use POST for this action.', 405);
     const body = await readJsonBody(request);
     if (action === 'cancel') return json(await store.cancel(id));
@@ -132,11 +134,11 @@ async function handleProjectRequest(request, url, match, store, json) {
           ? 'sequence'
           : action === 'flows'
             ? 'flow'
-            : ['architecture', 'nouns', 'endpoints', 'directories'].includes(action)
+            : ['architecture', 'areas', 'nouns', 'endpoints', 'directories'].includes(action)
               ? action
               : 'initial',
         action === 'presentations' ? body.topic
-          : ['nouns', 'endpoints'].includes(action) ? body.scope
+          : ['nouns', 'areas', 'endpoints'].includes(action) ? body.scope
           : ['architecture', 'sequences'].includes(action) ? body.question : body.feature,
       ),
       202,
@@ -214,7 +216,7 @@ export function createApp({
         const analysisAction = url.pathname.match(
           new RegExp(
             '^/api/projects/([a-zA-Z0-9_-]+)/analyses/' +
-            '(directories|architecture|flows|nouns|sequences|endpoints|presentations)/' +
+            '(directories|architecture|areas|flows|nouns|sequences|endpoints|presentations)/' +
             '([a-zA-Z0-9_-]+)/(rerun|modify|duplicate|delete)$',
           ),
         );
@@ -258,8 +260,8 @@ export function createApp({
         const match = url.pathname.match(
           new RegExp(
             '^/api/projects/([a-zA-Z0-9_-]+)(?:/' +
-            '(source|analysis|directories|flows|architecture|nouns|sequences|endpoints|presentations|' +
-            'cancel|delete|rename))?$',
+            '(source|analysis|directories|flows|architecture|areas|nouns|sequences|endpoints|' +
+            'presentations|cancel|delete|rename))?$',
           ),
         );
         if (match) {

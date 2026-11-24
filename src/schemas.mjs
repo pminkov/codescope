@@ -76,6 +76,21 @@ export function stackLabels(value) {
 }
 
 export const schemas = {
+  areas: objectSchema({
+    nextPrompts,
+    title: { ...text, maxLength: 120 },
+    description: { ...text, maxLength: 1200 },
+    scope: { ...text, maxLength: 600 },
+    sources: arraySchema(source, 16),
+    areas: arraySchema(objectSchema({
+      id: { ...text, pattern: '^[a-zA-Z0-9_-]+$', maxLength: 80 },
+      parentId: nullableSchema({ ...text, maxLength: 80 }),
+      name: { ...text, maxLength: 80 },
+      description: { ...text, maxLength: 800 },
+      sources: { ...arraySchema(source, 12), minItems: 1 },
+    }), 100),
+    notes: arraySchema({ ...text, maxLength: 600 }, 8),
+  }),
   presentation: objectSchema({
     nextPrompts,
     formatVersion: { type: 'integer', enum: [1] },

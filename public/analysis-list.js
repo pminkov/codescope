@@ -19,6 +19,7 @@ export function getAnalysisEntries(project) {
   for (const [collection, tab, label, icon] of [
     ['architectures', 'architecture', 'Architecture', 'architecture'],
     ['flows', 'flows', 'Code flow', 'flow'],
+    ['areaAnalyses', 'areas', 'Areas', 'areas'],
     ['nounAnalyses', 'nouns', 'Nouns', 'nouns'],
     ['sequences', 'sequences', 'Sequence diagram', 'sequences'],
     ['presentations', 'presentations', 'Presentation', 'presentation'],

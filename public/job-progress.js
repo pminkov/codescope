@@ -15,6 +15,7 @@ export function getJobAnalysisTargets(project) {
     architecture: ['architectures', 'architecture'],
     flow: ['flows', 'flows'],
     nouns: ['nounAnalyses', 'nouns'],
+    areas: ['areaAnalyses', 'areas'],
     sequence: ['sequences', 'sequences'],
     presentation: ['presentations', 'presentations'],
   };

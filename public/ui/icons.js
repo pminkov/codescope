@@ -1,4 +1,8 @@
 const icons = {
+  areas: /* HTML */ `
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 10h18M11 10v11M11 15h10" />
+  `,
   presentation: /* HTML */ `
     <path d="M3 3h18v13H3zM12 16v5m-5 0 5-5 5 5M7 7h10M7 11h6" />
   `,
