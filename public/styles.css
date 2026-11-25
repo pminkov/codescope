@@ -2,6 +2,7 @@
   color-scheme: dark;
   --analysis-content-padding: 33px 28px 36px;
   --page-gutter: clamp(28px, 5vw, 72px);
+  --project-layout-gap: 14px;
   --bg: #10130f;
   --panel: #181c17;
   --panel-raised: #252c22;
@@ -204,7 +205,7 @@ main { padding-bottom: 32px; }
   display: flex;
   justify-content: space-between;
   gap: 2px;
-  padding-top: 8px;
+  padding-top: var(--project-layout-gap);
   overflow: auto hidden;
   scrollbar-width: thin;
 }
@@ -260,7 +261,7 @@ main { padding-bottom: 32px; }
 .tiny-label { font: 0.8125rem ui-monospace, SFMono-Regular, monospace; letter-spacing: .7px; color: var(--faint); }
 .search-field { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 5px; margin: 20px 0 18px; background: var(--panel); color: var(--faint); }
 .directory-workspace .search-field { margin-top: 0; }
-.directory-workspace { margin-top: 12px; }
+.workspace.directory-workspace { margin-top: var(--project-layout-gap); }
 /* Start directory navigation at the same height as its overview heading. */
 @media (min-width: 801px) { .directory-workspace > .sidebar { padding: var(--analysis-content-padding); padding-inline: 17px; } }
 .search-field .icon { width: 14px; height: 14px; }
@@ -612,7 +613,7 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 0 11px;
+  padding-block: var(--project-layout-gap);
   border-bottom: 1px solid var(--border);
 }
 .project-selection {
@@ -669,12 +670,11 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
   .topbar-content { min-height: 76px; }
   .brand-blueprint { flex-basis: 192px; }
   .tabs { gap: 8px; }
-  .directory-workspace { margin-top: 12px; }
 }
 
 @media (max-width: 600px) {
   main { padding-bottom: 90px; }
-  .project-bar { gap: 8px; padding-top: 11px; }
+  .project-bar { gap: 8px; }
 }
 
 @media (max-width: 480px) {
