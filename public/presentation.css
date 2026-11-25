@@ -6,21 +6,21 @@
 .presentation-types, .presentation-toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
 .presentation-types { justify-content: center; margin: 24px 0; }
 .presentation-types span { padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px; }
-.presentation-types span { font-size: .85rem; color: var(--green); }
+.presentation-types span { font-size: .85rem; color: var(--accent); }
 .presentation-decks { margin-bottom: 30px; }
 .presentation-decks .flow-option > div { min-width: 0; overflow-wrap: anywhere; }
 .presentation-outline { display: grid; gap: 5px; }
 .presentation-outline button { display: flex; gap: 12px; text-align: left; padding: 10px; }
 .presentation-outline button { background: transparent; color: var(--muted); border: 0; }
 .presentation-outline button { border-radius: 5px; font: inherit; font-size: .85rem; }
-.presentation-outline button span { color: var(--green); font: .8rem ui-monospace, monospace; }
+.presentation-outline button span { color: var(--accent); font: .8rem ui-monospace, monospace; }
 .presentation-outline button[aria-current] { background: var(--hover); color: var(--text); }
 .presentation-toolbar { align-items: center; margin: 20px 0 16px; }
 .presentation-toolbar > span { font-size: .8rem; color: var(--muted); margin-left: auto; }
 .presentation-toolbar a { text-decoration: none; }
-.presentation-stage { container-type: inline-size; background: #0c1716; border-radius: 12px; }
-.presentation-stage { border: 1px solid var(--green-line); overflow: hidden; }
-.presentation-stage:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.presentation-stage { container-type: inline-size; background: var(--input); border-radius: 12px; }
+.presentation-stage { border: 1px solid var(--accent-line); overflow: hidden; }
+.presentation-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .deck-slide { position: relative; display: flex; flex-direction: column; aspect-ratio: 16 / 10; }
 .deck-slide { padding: 3cqw 4cqw 2cqw; color: #eaf1ed; background: #102421; }
 .deck-slide { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -63,8 +63,8 @@
 .deck-diagram-legend { margin: 0; font-size: 1.1cqw; color: #b8ccc3; }
 .deck-slide-footer { text-transform: uppercase; padding-top: 1cqw; }
 .presentation-controls { display: flex; align-items: center; justify-content: center; gap: 18px; }
-.presentation-controls { padding: 12px; color: #bfd4c7; border-top: 1px solid #34524a; }
-.presentation-controls .button { color: #eaf1ed; background: #213d33; border: 1px solid #739e80; }
+.presentation-controls { padding: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.presentation-controls .button { color: var(--text); background: var(--panel); border: 1px solid var(--border); }
 .presentation-controls .button:disabled { opacity: .4; }
 .presentation-controls > span { font-size: .85rem; }
 .presentation-exit { display: none; }
