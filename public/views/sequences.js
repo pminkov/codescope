@@ -20,7 +20,7 @@ function renderSequenceOption(analysis, index, selected, projectUrl) {
       <span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span>
       <div>
         <strong>${escape(analysis.title)}</strong>
-        <p>${escape(analysis.requestedQuestion)}</p>
+        ${analysis.requestedQuestion ? `<p>${escape(analysis.requestedQuestion)}</p>` : ''}
       </div>
       ${renderIcon('arrow')}
     </a>

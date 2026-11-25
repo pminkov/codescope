@@ -19,7 +19,8 @@ function renderArchitectureOption(graph, index, selected, projectUrl) {
       <span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span>
       <div>
         <strong>${escape(graph.title)}</strong>
-        <p>${escape(graph.requestedQuestion || 'Overall system architecture')}</p>
+        <p>${escape(graph.requestedQuestion ||
+          (graph.id === 'overview' ? 'Overall system architecture' : 'Focused architecture'))}</p>
       </div>
       ${renderIcon('arrow')}
     </a>

@@ -1,7 +1,9 @@
 import { renderIcon } from './ui/icons.js';
 import { renderAnalysisChanges, formatAnalysisDate } from './ui/analysis-controls.js';
 import { renderSourcePreview } from './ui/source-preview.js';
-import { renderEmptyProjectWorkspace, renderProjectLoadError } from './views/workspace.js';
+import {
+  renderEmptyDemoView, renderEmptyProjectWorkspace, renderProjectLoadError,
+} from './views/workspace.js';
 import {
   renderDirectoriesView,
   renderDirectoryTree,
@@ -43,6 +45,8 @@ document.querySelectorAll('[data-icon]').forEach((element) => {
   element.innerHTML = renderIcon(element.dataset.icon);
 });
 
+const isDemo = document.documentElement.hasAttribute('data-demo');
+let demoExcerpts;
 let data;
 let expanded = new Set(['']);
 let query = '';
@@ -169,7 +173,7 @@ function currentAskContext() {
   };
 }
 
-const ask = setupAsk(currentAskContext, openSource, dialogStack);
+const ask = isDemo ? null : setupAsk(currentAskContext, openSource, dialogStack);
 
 // Return every node in the browser's directory tree.
 function flattenTree(node) {
@@ -180,7 +184,8 @@ function flattenTree(node) {
 function projectUrl(tab, selection = '', id = data?.id) {
   const path = selection.split('/').map(encodeURIComponent).join('/');
 
-  return `/projects/${id}/${tab}${selection ? `/${path}` : ''}`;
+  const prefix = isDemo ? '#' : `/projects/${id}`;
+  return `${prefix}/${tab}${selection ? `/${path}` : ''}`;
 }
 
 // Build the directory view URL for a source path.
@@ -188,10 +193,15 @@ function directoryUrl(path) {
   return projectUrl('directories', path);
 }
 
+// Compare routes by fragment on a static host and by pathname on the local server.
+function currentRouteLocation() {
+  return isDemo ? location.hash : location.pathname;
+}
+
 // Read the selected project, view, and item from the current URL.
 function currentRoute() {
-  const parts = location.pathname.slice(1).split('/');
-  const id = parts[0] === 'projects' ? parts.splice(0, 2)[1] : null;
+  const parts = currentRouteLocation().slice(isDemo ? 2 : 1).split('/');
+  const id = isDemo ? data?.id : parts[0] === 'projects' ? parts.splice(0, 2)[1] : null;
   const [tab, ...selection] = parts;
   let path = '';
 
@@ -211,8 +221,9 @@ function currentRoute() {
 // Load current source state whenever navigation opens an analysis or directory.
 async function navigate(url, replace = false) {
   if (replace) history.replaceState(null, '', url);
-  else if (url !== location.pathname) history.pushState(null, '', url);
-  await loadCurrentProject();
+  else if (url !== currentRouteLocation()) history.pushState(null, '', url);
+  if (isDemo) render();
+  else await loadCurrentProject();
   if (currentRoute().tab === 'areas')
     selectElement('.area-breadcrumb [aria-current="page"]')?.focus({ preventScroll: true });
 }
@@ -283,7 +294,7 @@ function openAnalysisChanges() {
   selectElement('#analysis-changes-title').textContent =
     `${paths.length} ${paths.length === 1 ? 'file' : 'files'} changed since this analysis`;
   selectElement('#analysis-changes-list').innerHTML = renderAnalysisChanges(paths, review);
-  dialog.dataset.route = location.pathname;
+  dialog.dataset.route = currentRouteLocation();
   if (!dialog.open) dialog.showModal();
 }
 
@@ -352,6 +363,7 @@ function changePresentationSlide(index) {
     deck.slides[position], position, deck.slides.length, data.name,
   );
   selectElement('.presentation-notes').innerHTML = renderPresentationNotes(deck.slides[position]);
+  if (isDemo) updateDemoSourceControls(selectElement('.presentation-notes'));
   selectElement('[data-slide-position]').textContent =
     `Slide ${position + 1} of ${deck.slides.length}`;
   selectElement('[data-presentation-action="previous"]').disabled = position === 0;
@@ -418,7 +430,7 @@ function renderFlows() {
 
     for (const step of steps) detailState.set(`${selected.id}:${step.id}`, !currentlyOpen);
 
-    renderFlows();
+    render();
   });
   // Register expansion tracking for each rendered step.
   document.querySelectorAll('[data-detail]').forEach((element) =>
@@ -495,7 +507,7 @@ function openNounDetails(id) {
   );
   if (!noun) return;
   const dialog = selectElement('#noun-details-dialog');
-  dialog.dataset.route = location.pathname;
+  dialog.dataset.route = currentRouteLocation();
   dialog.dataset.analysis = analysis.id;
   dialog.dataset.nounId = noun.id;
   selectElement('#noun-details-title').textContent = noun.name;
@@ -504,6 +516,7 @@ function openNounDetails(id) {
   dialog.querySelectorAll('.source-disclosure').forEach((disclosure) => {
     disclosure.open = true;
   });
+  if (isDemo) updateDemoSourceControls(dialog);
   selectElement('#noun-details-body').scrollTop = 0;
   if (!dialog.open) dialog.showModal();
 }
@@ -552,7 +565,7 @@ function openSequenceDetails({ messageNumber, participantId }) {
   );
   if (!message && !participant) return;
   const dialog = selectElement('#sequence-details-dialog');
-  dialog.dataset.route = location.pathname;
+  dialog.dataset.route = currentRouteLocation();
   dialog.dataset.analysis = analysis.id;
   dialog.dataset.messageNumber = message ? String(messageNumber) : '';
   selectElement('#sequence-details-title').textContent = message ? message.label : participant.name;
@@ -576,6 +589,7 @@ function openSequenceDetails({ messageNumber, participantId }) {
     participant,
   );
 
+  if (isDemo) updateDemoSourceControls(dialog);
   selectElement('#sequence-details-body').scrollTop = 0;
   if (!dialog.open) dialog.showModal();
 }
@@ -587,7 +601,7 @@ function stepSequenceMessage(direction) {
   if (
     !dialog.open ||
     !dialog.dataset.messageNumber ||
-    dialog.dataset.route !== location.pathname ||
+    dialog.dataset.route !== currentRouteLocation() ||
     dialog.dataset.analysis !== analysis?.id
   )
     return;
@@ -728,6 +742,7 @@ function openNodeDetails(id) {
   selectElement('#node-kind').textContent = node.kind;
   selectElement('#node-title').textContent = node.title;
   selectElement('#node-body').innerHTML = renderNodeDetails(graph, node);
+  if (isDemo) updateDemoSourceControls(dialog);
   selectElement('#node-body').scrollTop = 0;
   dialog.showModal();
 }
@@ -815,10 +830,10 @@ function render() {
   diagramObserver = undefined;
   const { tab } = currentRoute();
   const changesDialog = selectElement('#analysis-changes-dialog');
-  if (changesDialog.open && changesDialog.dataset.route !== location.pathname)
+  if (changesDialog.open && changesDialog.dataset.route !== currentRouteLocation())
     changesDialog.close();
   const sequenceDialog = selectElement('#sequence-details-dialog');
-  if (sequenceDialog.open && sequenceDialog.dataset.route !== location.pathname) {
+  if (sequenceDialog.open && sequenceDialog.dataset.route !== currentRouteLocation()) {
     selectElement('#source-dialog').close();
     sequenceDialog.close();
   }
@@ -826,7 +841,7 @@ function render() {
   const nounsAnalysis = getSelectedNounsAnalysis();
   if (
     nounDialog.open &&
-    (nounDialog.dataset.route !== location.pathname ||
+    (nounDialog.dataset.route !== currentRouteLocation() ||
       nounDialog.dataset.analysis !== nounsAnalysis?.id ||
       !nounsAnalysis?.nouns.some(
         // Close details when the selected concept no longer belongs to this result.
@@ -838,7 +853,7 @@ function render() {
   }
   const nodeDialog = selectElement('#node-dialog');
   const modificationDialog = selectElement('#modify-analysis-dialog');
-  if (modificationDialog.open && modificationDialog.dataset.route !== location.pathname)
+  if (modificationDialog.open && modificationDialog.dataset.route !== currentRouteLocation())
     modificationDialog.close('cancel');
   if (
     nodeDialog.open &&
@@ -857,7 +872,15 @@ function render() {
     else selectElement(`#tab-${name}`).removeAttribute('aria-current');
   }
 
-  if (tab === 'flows') renderFlows();
+  const savedAnalyses = {
+    flows: data.flows, architecture: data.architectures, areas: data.areaAnalyses,
+    nouns: data.nounAnalyses, sequences: data.sequences, endpoints: data.endpointAnalyses,
+    presentations: data.presentations,
+  };
+  if (isDemo && savedAnalyses[tab]?.length === 0) {
+    const label = selectElement(`#tab-${tab}`).textContent.replace(/\d+/g, '').trim();
+    selectElement('#view').innerHTML = renderEmptyDemoView(label);
+  } else if (tab === 'flows') renderFlows();
   else if (tab === 'architecture') renderArchitecture();
   else if (tab === 'areas') renderAreas();
   else if (tab === 'nouns') renderNouns();
@@ -874,11 +897,13 @@ function render() {
     );
   } else if (tab === 'all') renderAllAnalyses();
   else renderDirectories();
-  ask.refresh();
+  if (isDemo) updateDemoSourceControls(selectElement('#view'));
+  ask?.refresh();
 }
 
 // Fetch JSON and surface API errors as readable exceptions.
 async function fetchJson(url, options) {
+  if (isDemo && url !== './project.json') throw new Error('Available in the local app.');
   const response = await fetch(url, options);
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || 'Could not load the project.');
@@ -1093,8 +1118,8 @@ function updateHeader() {
   const busy = ['queued', 'running'].includes(data.job?.status);
   document.title = `${data.name} · CodeScope`;
   selectElement('#project-info-title').textContent = data.name;
-  selectElement('#project-path').textContent = data.root;
-  selectElement('#project-path').title = data.root;
+  selectElement('#project-path').textContent = data.root || '';
+  selectElement('#project-path').title = data.root || '';
   selectElement('#stack').innerHTML =
     data.stack
       .map(
@@ -1139,6 +1164,11 @@ function updateHeader() {
 // Reload the registered projects and update the project picker.
 async function loadProjects() {
   projects = (await fetchJson('/api/projects')).projects;
+  renderProjectPicker();
+}
+
+// Populate the project picker from the current registry or the exported project.
+function renderProjectPicker() {
   selectElement('#project-picker').innerHTML = projects.length
     ? projects
         .map(
@@ -1151,7 +1181,7 @@ async function loadProjects() {
     : /* HTML */ `
         <option value="">No projects yet</option>
       `;
-  selectElement('#project-picker').disabled = !projects.length;
+  selectElement('#project-picker').disabled = isDemo || !projects.length;
   if (data) selectElement('#project-picker').value = data.id;
 }
 
@@ -1331,7 +1361,7 @@ function promptForAnalysisModification(kind, id) {
   input.value = modificationDrafts.get(key) || '';
   input.setCustomValidity('');
   dialog.returnValue = '';
-  dialog.dataset.route = location.pathname;
+  dialog.dataset.route = currentRouteLocation();
 
   return new Promise(
     // Resolve only an explicit submission and retain the text after cancellation.
@@ -1360,14 +1390,14 @@ async function runAnalysisAction(action, kind, id) {
   )
     return;
   const projectId = data.id;
-  const pathname = location.pathname;
+  const pathname = currentRouteLocation();
   analysisActionPending = true;
 
   try {
     if (action === 'delete' && !(await confirmAnalysisDeletion(analysisTitle(kind, id)))) return;
     const prompt = action === 'modify' ? await promptForAnalysisModification(kind, id) : null;
     if (action === 'modify' && !prompt) return;
-    if (data?.id !== projectId || location.pathname !== pathname) return;
+    if (data?.id !== projectId || currentRouteLocation() !== pathname) return;
     render();
     const url =
       kind === 'directories' && !data.hasDirectoryAnalysis && action === 'rerun'
@@ -1377,7 +1407,7 @@ async function runAnalysisAction(action, kind, id) {
     if (action === 'modify') modificationDrafts.delete(`${projectId}:${kind}:${id}`);
     if (data?.id !== projectId || currentRoute().id !== projectId) return;
     if (['rerun', 'modify'].includes(action)) data.job = result;
-    else if (location.pathname === pathname)
+    else if (currentRouteLocation() === pathname)
       history.replaceState(
         null,
         '',
@@ -1490,7 +1520,7 @@ async function deleteCurrentProject(id) {
     deletingProject = false;
     selectElement('#delete-project-label').textContent = 'Delete';
     selectElement('#delete-project').disabled = !data;
-    selectElement('#project-picker').disabled = !projects.length;
+    selectElement('#project-picker').disabled = isDemo || !projects.length;
     if (projects.length) await loadCurrentProject();
     else renderEmptyWorkspace();
   }
@@ -1506,7 +1536,7 @@ function renderEmptyWorkspace() {
   ++loadSequence;
   ++sourceRequest;
   data = undefined;
-  ask.refresh();
+  ask?.refresh();
   diagramObserver?.disconnect();
   diagramObserver = undefined;
   document.title = 'CodeScope · Understand your projects';
@@ -1688,6 +1718,10 @@ async function browseProjectDirectory() {
 // Load projects and restore a saved project or legacy route on startup.
 async function initializeApp() {
   try {
+    if (isDemo) {
+      await initializeDemo();
+      return;
+    }
     await loadProjects();
     if (!projects.length) {
       renderEmptyWorkspace();
@@ -1737,14 +1771,80 @@ async function initializeApp() {
   }
 }
 
+// Load the exported display data once, including on a direct link to a saved result.
+async function initializeDemo() {
+  const snapshot = await fetchJson('./project.json');
+  data = snapshot.project;
+  demoExcerpts = snapshot.excerpts;
+  projects = [data];
+  renderProjectPicker();
+  selectElement('.demo-label').hidden = false;
+  const launcher = selectElement('#ask-launcher');
+  launcher.title = 'Ask is available in the local app';
+  launcher.setAttribute('aria-label', launcher.title);
+  const populated = data.architectures.filter(
+    // Empty diagrams have no components for a visitor to explore.
+    (graph) => graph.nodes.length,
+  );
+  const overview = populated.find(
+    // Prefer the populated system overview as the first screen of the demo.
+    (graph) => graph.id === 'overview',
+  ) || populated[0];
+  if (!location.hash.startsWith('#/')) {
+    const url = overview ? projectUrl('architecture', overview.id) : projectUrl('directories');
+    history.replaceState(null, '', url);
+  }
+  updateHeader();
+  render();
+}
+
+// Find the published range containing a citation, or all excerpts for a file-level link.
+function findDemoExcerpts(path, line) {
+  const excerpts = Object.hasOwn(demoExcerpts, path) ? demoExcerpts[path] : [];
+  if (line == null) return excerpts;
+  return excerpts.filter(
+    // A code scan symbol can be previewed if its line falls within a published range.
+    (excerpt) => line >= excerpt.start && line < excerpt.start + excerpt.lines.length,
+  );
+}
+
+// Mark unpublished sources where their controls appear, including inside detail dialogs.
+function updateDemoSourceControls(container) {
+  for (const control of container.querySelectorAll('[data-source]')) {
+    if (findDemoExcerpts(control.dataset.source, control.dataset.line).length) {
+      control.title = control.classList.contains('stale-source')
+        ? 'File changed since analysis. View exported excerpt.'
+        : 'View exported source excerpt';
+    } else {
+      control.disabled = true;
+      control.title = 'Source excerpt omitted from this demo';
+    }
+  }
+}
+
 // Open a read-only source preview and ignore obsolete fetch responses.
-async function openSource(path, line = 1, symbol = '', endLine = line) {
+async function openSource(path, line, symbol = '', endLine = line, stale = false) {
   const requestId = ++sourceRequest;
   const dialog = selectElement('#source-dialog');
   const targetLine = Math.max(1, Number(line) || 1);
   selectElement('#source-title').textContent = `/${path.replace(/^\/+/, '')}`;
   const finalLine = Math.max(targetLine, Number(endLine) || targetLine);
   const sourceLabel = symbol.endsWith('()') || symbol.includes(' ') ? symbol : `${symbol}()`;
+  if (isDemo) {
+    const excerpts = findDemoExcerpts(path, line);
+    if (!excerpts.length) return;
+    const context = ['Exported source excerpt'];
+    if (symbol) context.push(sourceLabel);
+    if (stale) context.push('File changed since analysis');
+    selectElement('#source-context').textContent = context.join(' · ');
+    selectElement('#source-body').innerHTML = excerpts.map(
+      // Preserve file line numbers and separate noncontiguous excerpts.
+      ({ start, lines }) => renderSourcePreview(lines, targetLine, finalLine, start),
+    ).join('');
+    if (!dialog.open) dialog.showModal();
+    selectElement(`#source-line-${targetLine}`)?.scrollIntoView({ block: 'center' });
+    return;
+  }
   selectElement('#source-context').textContent = symbol
     ? `${sourceLabel} · line ${targetLine} · Current local source`
     : 'Current local source · Read-only preview';
@@ -1839,9 +1939,12 @@ document.addEventListener('click', (event) => {
   ) {
     link.closest('.job-actions')?.removeAttribute('open');
     const url = new URL(link.href, location.href);
-    if (url.origin === location.origin && isProjectViewUrl(url.pathname)) {
+    const internal = isDemo
+      ? url.pathname === location.pathname && url.hash.startsWith('#/')
+      : isProjectViewUrl(url.pathname);
+    if (url.origin === location.origin && internal) {
       event.preventDefault();
-      navigate(url.pathname);
+      navigate(isDemo ? url.hash : url.pathname);
 
       return;
     }
@@ -1869,7 +1972,10 @@ document.addEventListener('click', (event) => {
   }
 
   const source = event.target.closest('[data-source]');
-  if (source) openSource(source.dataset.source, source.dataset.line, source.dataset.symbol);
+  if (source && !source.disabled) {
+    openSource(source.dataset.source, source.dataset.line, source.dataset.symbol,
+      source.dataset.endLine, source.classList.contains('stale-source'));
+  }
   if (event.target.closest('[data-analysis-changes]')) openAnalysisChanges();
   const node = event.target.closest('button[data-node]');
   if (node) openNodeDetails(node.dataset.node);
@@ -1967,7 +2073,7 @@ selectElement('#close-noun-details').addEventListener('click', () =>
 // Return focus to the matching card even if the inventory was refreshed while open.
 selectElement('#noun-details-dialog').addEventListener('close', (event) => {
   const dialog = event.currentTarget;
-  if (dialog.dataset.route !== location.pathname) return;
+  if (dialog.dataset.route !== currentRouteLocation()) return;
   selectElement(`[data-noun="${CSS.escape(dialog.dataset.nounId)}"]`)?.focus({
     preventScroll: true,
   });
@@ -2219,7 +2325,8 @@ document.addEventListener('submit', async (event) => {
 });
 // Restore the current project view after browser history navigation.
 window.addEventListener('popstate', () => {
-  loadCurrentProject();
+  if (isDemo) render();
+  else loadCurrentProject();
 });
 
 // Navigate slides only when a presentation is visible and no text field or dialog owns input.

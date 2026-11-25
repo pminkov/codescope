@@ -1162,3 +1162,26 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .endpoint-notes { margin-top: 28px; color: var(--muted); }
 .endpoint-notes h3 { color: var(--text); font-size: 1rem; font-weight: 500; }
 @media (max-width: 420px) { .endpoint-server > header { flex-direction: column; gap: 6px; } .endpoint-details dl > div { grid-template-columns: 1fr; gap: 4px; } }
+
+/* A static snapshot has no local workspace or analysis worker. */
+html[data-demo] :is(
+  #app-settings, #add-project, #rename-project, #delete-project, .project-actions .actions-divider,
+  .project-info-fields > div:has(#project-path), .node-dialog-footer, .flow-composer,
+  .analysis-actions, [data-action="endpoints"], [data-scan-refresh], .presentation-toolbar [download]
+) {
+  display: none;
+}
+
+html[data-demo] [data-source]:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+html[data-demo] .source-code + .source-code {
+  border-top: 1px dashed var(--border);
+}
+
+.demo-label {
+  color: var(--muted);
+  font-size: .875rem;
+}

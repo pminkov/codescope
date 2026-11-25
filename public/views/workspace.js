@@ -1,3 +1,5 @@
+import { escapeHtml } from '../content.js';
+
 // Explain how to start using an empty workspace.
 export function renderEmptyProjectWorkspace() {
   return /* HTML */ `
@@ -18,5 +20,15 @@ export function renderProjectLoadError() {
       <h2>Could not open this project</h2>
       <p>Select another project, or check that its directory is still available.</p>
     </div>
+  `;
+}
+
+// Explain when a project snapshot has no saved analysis for the selected tab.
+export function renderEmptyDemoView(label) {
+  return /* HTML */ `
+    <article class="empty-analysis">
+      <h2>${escapeHtml(label)}</h2>
+      <p>This demo has no saved analysis for this view.</p>
+    </article>
   `;
 }

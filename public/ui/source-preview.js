@@ -11,12 +11,14 @@ function renderSourceLine(text, number, highlighted) {
 }
 
 // Keep source text and line breaks exact inside the whitespace-sensitive preview.
-export function renderSourcePreview(lines, targetLine, finalLine) {
+export function renderSourcePreview(lines, targetLine, finalLine, start = 1) {
   const content = lines
     .map(
       // Highlight every line in the requested citation range.
-      (text, index) =>
-        renderSourceLine(text, index + 1, index + 1 >= targetLine && index + 1 <= finalLine),
+      (text, index) => {
+        const number = start + index;
+        return renderSourceLine(text, number, number >= targetLine && number <= finalLine);
+      },
     )
     .join('');
 

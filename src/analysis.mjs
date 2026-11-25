@@ -138,7 +138,9 @@ export async function scanDirectory(root, options = {}) {
         if (result.unignored) ignored = false;
       }
 
-      if (ignored) continue;
+      if (ignored ||
+        (options.excludeDirectory && resolve(canonicalRoot, childPath) === options.excludeDirectory))
+        continue;
       if (entry.isDirectory()) children.push(await scanChildren(childPath, rules, depth + 1));
       else if (entry.isFile()) {
         if (++fileCount > 20000)
@@ -221,8 +223,8 @@ async function fingerprintFile(root, path, signal) {
 }
 
 // Build an in-memory tree and hash every eligible file, including binary files.
-export async function indexProject(root, name, signal) {
-  const tree = await scanDirectory(root, { name, signal });
+export async function indexProject(root, name, signal, { excludeDirectory } = {}) {
+  const tree = await scanDirectory(root, { name, signal, excludeDirectory });
   const files = {};
   const canonicalRoot = await realpath(root);
 

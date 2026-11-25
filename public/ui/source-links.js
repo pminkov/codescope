@@ -22,7 +22,8 @@ export function renderSourceButton(reference, label, className = '') {
     <button
       class="source-link ${reference.stale ? 'stale-source' : ''} ${className}"
       data-source="${escape(reference.path)}"
-      data-line="${reference.line || 1}"
+      ${reference.line ? `data-line="${reference.line}"` : ''}
+      ${reference.endLine ? `data-end-line="${reference.endLine}"` : ''}
       data-symbol="${escape(reference.symbol || '')}"
       title="${title}"
     >
@@ -93,6 +94,7 @@ function renderSourceGroup(path, references) {
                       class="line-reference ${reference.stale ? 'stale-source' : ''}"
                       data-source="${escape(path)}"
                       data-line="${reference.line}"
+                      ${reference.endLine ? `data-end-line="${reference.endLine}"` : ''}
                       aria-label="Open ${escape(path)} at line ${reference.line}"
                       title="${
                         reference.stale

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "export-demo": "node scripts/export-demo.mjs",
     "dev": "node --watch src/server.mjs",
     "start": "node src/server.mjs",
     "test": "node --test test/*.test.mjs",
