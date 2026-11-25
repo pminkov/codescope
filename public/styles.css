@@ -171,10 +171,15 @@ main { padding-bottom: 32px; }
 .stack-label { display: inline-block; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); background: var(--panel); font-size: 0.875rem; line-height: 1.5; }
 .mono, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .tabs {
+  --tab-padding-block: 9px;
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 2px;
   padding-top: var(--project-layout-gap);
+  font-size: .875rem;
+  /* Include any horizontal scrollbar in the space below the tab buttons. */
+  block-size: calc(1lh + 2 * (var(--tab-padding-block) + var(--project-layout-gap)));
   overflow: auto hidden;
   scrollbar-width: thin;
 }
@@ -183,10 +188,9 @@ main { padding-bottom: 32px; }
   flex: 0 0 auto;
   align-items: center;
   gap: 6px;
-  padding: 9px 8px;
+  padding: var(--tab-padding-block) 8px;
   border-radius: 8px;
   color: var(--tab-label);
-  font-size: .875rem;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -202,6 +206,10 @@ main { padding-bottom: 32px; }
 .tabs > .active .count {
   color: inherit;
   background: color-mix(in srgb, currentColor 12%, transparent);
+}
+#job-panel:not(:empty), #notice:not(:empty) { margin-block-end: var(--project-layout-gap); }
+#job-panel > :first-child, #notice > :first-child, #view > :first-child {
+  margin-block-start: 0;
 }
 /* Combine saved analysis types in one chronological list. */
 .all-analyses { margin-top: 26px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
