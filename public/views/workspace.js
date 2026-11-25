@@ -4,7 +4,9 @@ export function renderEmptyProjectWorkspace() {
     <article class="empty-analysis">
       <h2>Understand a local project</h2>
       <p>Add a repository or directory to explore its structure, architecture, and code flows.</p>
-      <button class="button primary" data-action="add">+ Add project</button>
+      <button class="button primary" data-action="add">
+        <span class="project-add-mark" aria-hidden="true">+</span> Add project
+      </button>
     </article>
   `;
 }
