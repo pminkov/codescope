@@ -44,24 +44,24 @@
 }
 [data-theme='light'] {
   color-scheme: light;
-  --bg: #eff1f3;
-  --panel: #f9fafb;
-  --panel-raised: #eaeef2;
-  --hover: #eaeef2;
-  --input: #f6f8fa;
+  --bg: #e2e6e9;
+  --panel: #eceef0;
+  --panel-raised: #dce2e7;
+  --hover: #d7dfe6;
+  --input: #e5e9ec;
   --text: #1f2328;
   --muted: #505a65;
   --tab-label: #4f5964;
   --faint: #59636e;
-  --border: #d1d9e0;
-  --soft-border: #e3e8ed;
-  --accent: #0969da;
+  --border: #c2cbd3;
+  --soft-border: #d3dbe1;
+  --accent: #085ebf;
   --accent-bg: #eaf3ff;
   --accent-line: #a7c7ef;
-  --brand-bar-line: #d1d9e0;
-  --brand-bar-bg: #f6f8fa;
+  --brand-bar-line: var(--border);
+  --brand-bar-bg: #f1f3f5;
   --brand-echo: #afc0d3;
-  --selected-tab-bg: #e1e6ed;
+  --selected-tab-bg: #d3dbe3;
   --selected-tab-border: #8491a1;
   --action-fill: #dde7f1;
   --action-hover: #d0deec;
