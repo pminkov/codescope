@@ -154,6 +154,7 @@ function renderDirectoryAnalysisControls(project) {
 
 // Compose a directory's summary, evidence, folders, and file inventory.
 function renderDirectoryContent(project, node, { projectUrl, directoryUrl, actionsBusy }) {
+  const isProjectRoot = node.path === project.tree.path;
   const folders = node.children.filter(
     // Select the current directory's subdirectories for their cards.
     (child) => child.type === 'directory',
@@ -166,18 +167,14 @@ function renderDirectoryContent(project, node, { projectUrl, directoryUrl, actio
   return /* HTML */ `
     <div class="content-heading">
       <div>
-        <div class="eyebrow">
-          DIRECTORY
-          OVERVIEW${
-            node.path !== project.tree.path
-              ? /* HTML */ `
-                  <span>/</span>
-                  ${escape(node.kind)}
-                `
-              : ''
-          }
-        </div>
-        <h2>${escape(node.title)}</h2>
+        ${
+          isProjectRoot
+            ? /* HTML */ `<h2 class="directory-overview-title">Directory overview</h2>`
+            : /* HTML */ `
+                <div class="eyebrow">DIRECTORY OVERVIEW <span>/</span> ${escape(node.kind)}</div>
+                <h2>${escape(node.title)}</h2>
+              `
+        }
         <p class="lead">${formatText(node.description)}</p>
       </div>
       ${renderAnalysisControls('directories', 'directories', {

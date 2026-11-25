@@ -38,6 +38,8 @@ const assets = {
   '/views/job-progress.js': ['views/job-progress.js', 'text/javascript'],
   '/views/workspace.js': ['views/workspace.js', 'text/javascript'],
   '/styles.css': ['styles.css', 'text/css'],
+  '/project-blueprint.svg': ['project-blueprint.svg', 'image/svg+xml'],
+  '/project-blueprint-light.svg': ['project-blueprint-light.svg', 'image/svg+xml'],
 };
 const pageRoute = new RegExp(
   '^/(?:projects/[a-zA-Z0-9_-]+/)?' +

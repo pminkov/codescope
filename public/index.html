@@ -26,58 +26,107 @@
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="/directories" aria-label="CodeScope home">
-        <!--
-          Lucide scan-search icon: https://lucide.dev/icons/scan-search
-          ISC License
-          Copyright (c) 2026 Lucide Icons and Contributors
+      <div class="topbar-content">
+        <h1 class="brand-heading">
+          <a class="brand" href="/directories" aria-label="CodeScope home">
+            <!--
+              Lucide scan-search icon: https://lucide.dev/icons/scan-search
+              ISC License
+              Copyright (c) 2026 Lucide Icons and Contributors
 
-          Permission to use, copy, modify, and/or distribute this software for any
-          purpose with or without fee is hereby granted, provided that the above
-          copyright notice and this permission notice appear in all copies.
+              Permission to use, copy, modify, and/or distribute this software for any
+              purpose with or without fee is hereby granted, provided that the above
+              copyright notice and this permission notice appear in all copies.
 
-          THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-          WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-          MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-          ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-          WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-          ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-          OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-        -->
-        <svg class="brand-icon" aria-hidden="true" focusable="false"
-          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-          <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-          <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-          <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-          <circle cx="12" cy="12" r="3"/>
-          <path d="m16 16-1.9-1.9"/>
-        </svg>
-        CodeScope
-      </a>
-      <button id="theme-toggle" class="icon-button" aria-label="Switch to light theme" title="Switch theme"></button>
+              THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+              WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+              MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+              ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+              WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+              ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+              OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+            -->
+            <svg class="brand-icon" aria-hidden="true" focusable="false"
+              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+              <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+              <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+              <circle cx="12" cy="12" r="3"/>
+              <path d="m16 16-1.9-1.9"/>
+            </svg>
+            CodeScope
+          </a>
+        </h1>
+        <div class="brand-blueprint" aria-hidden="true"></div>
+        <button
+          id="theme-toggle"
+          class="icon-button"
+          type="button"
+          aria-label="Switch to light theme"
+          title="Switch theme"
+        ></button>
+      </div>
     </header>
     <main>
-      <div class="project-bar"><div class="project-picker-field"><select id="project-picker" aria-label="Choose project"><option>Loading projects…</option></select><svg class="project-picker-chevron" aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></div><button id="add-project" class="button">+ Add project</button></div>
-      <section class="project-heading" aria-labelledby="project-name">
-        <div class="project-title">
-          <div class="project-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 10V7h9l3 3h12v17H4Z"/></svg></div>
-          <div class="title-line">
-            <h1 id="project-name"></h1>
-            <details id="project-actions" class="project-actions actions-dropdown" hidden>
-              <summary class="project-actions-trigger" aria-label="Project actions" title="Project actions"><span data-icon="more"></span></summary>
-              <div class="actions-menu" role="group" aria-label="Project actions">
-                <button type="button" id="project-info" aria-label="Project info" aria-haspopup="dialog" aria-controls="project-info-dialog" disabled><span data-icon="info"></span><span><strong>Info</strong><small>Project information</small></span></button>
-                <button type="button" id="rename-project" aria-label="Rename project" disabled><span data-icon="rename"></span><span><strong>Rename</strong><small>Change the project name</small></span></button>
-                <div class="actions-divider"></div>
-                <button type="button" id="delete-project" class="action-delete" aria-label="Delete project" disabled><span data-icon="delete"></span><span><strong id="delete-project-label">Delete</strong><small>Remove this project</small></span></button>
-              </div>
-            </details>
+      <div class="project-bar" role="group" aria-label="Project controls">
+        <div class="project-selection">
+          <div class="project-picker-field">
+            <span class="project-picker-icon" data-icon="folder" aria-hidden="true"></span>
+            <select id="project-picker" aria-label="Choose project">
+              <option>Loading projects…</option>
+            </select>
+            <svg class="project-picker-chevron" aria-hidden="true" viewBox="0 0 16 16">
+              <path d="m4 6 4 4 4-4"/>
+            </svg>
           </div>
+          <details id="project-actions" class="project-actions actions-dropdown" hidden>
+            <summary
+              class="project-actions-trigger"
+              aria-label="Project actions"
+              title="Project actions"
+            >
+              <span data-icon="more"></span>
+            </summary>
+            <div class="actions-menu" role="group" aria-label="Project actions">
+              <button
+                type="button"
+                id="project-info"
+                aria-label="Project info"
+                aria-haspopup="dialog"
+                aria-controls="project-info-dialog"
+                disabled
+              >
+                <span data-icon="info"></span>
+                <span><strong>Info</strong><small>Project information</small></span>
+              </button>
+              <button type="button" id="rename-project" aria-label="Rename project" disabled>
+                <span data-icon="rename"></span>
+                <span><strong>Rename</strong><small>Change the project name</small></span>
+              </button>
+              <div class="actions-divider"></div>
+              <button
+                type="button"
+                id="delete-project"
+                class="action-delete"
+                aria-label="Delete project"
+                disabled
+              >
+                <span data-icon="delete"></span>
+                <span>
+                  <strong id="delete-project-label">Delete</strong>
+                  <small>Remove this project</small>
+                </span>
+              </button>
+            </div>
+          </details>
         </div>
-      </section>
+        <button id="add-project" class="button" type="button">
+          <span class="project-add-mark" aria-hidden="true">+</span> Add project
+        </button>
+      </div>
       <nav class="tabs" aria-label="Project views">
         <a href="/directories" id="tab-directories">
           <span data-icon="folder"></span>Directories

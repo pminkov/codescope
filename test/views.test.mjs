@@ -99,8 +99,9 @@ test('directory views retain root labels, nested kinds, filtering, and expansion
   const root = renderDirectoriesView(project, project.tree, options);
   const child = renderDirectoriesView(project, project.tree.children[0], options);
   assert.doesNotMatch(root, /Repository structure|\bDIRS\b/);
-  assert.doesNotMatch(root.match(/class="eyebrow">([\s\S]*?)<\/div>/)[1], /application|<span>/);
+  assert.match(root, /<h2 class="directory-overview-title">Directory overview<\/h2>/);
   assert.match(child.match(/class="eyebrow">([\s\S]*?)<\/div>/)[1], /server/);
+  assert.match(child, /<h2>Runtime source<\/h2>/);
   assert.match(root, /Demo &lt;&amp;&gt;/);
   assert.match(root, /href="\/projects\/demo\/directories\/src"/);
   assert.match(root, /src<span class="slash">\/<\/span>/);

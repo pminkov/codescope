@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="830 124 518 190">
+  <defs>
+    <linearGradient id="cover" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#c2ed77" stop-opacity=".39"/>
+      <stop offset="1" stop-color="#abd766" stop-opacity=".09"/>
+    </linearGradient>
+    <path id="plate" d="M8 0h55l16 15h106q8 0 8 8v88q0 8-8 8H8q-8 0-8-8V8q0-8 8-8Z"/>
+    <path id="art-plus" d="M-4 0h8m-4-4v8"/>
+  </defs>
+  <!-- The folder opens into three projected layers, like a technical drawing. -->
+  <g fill="none" stroke="#a1c16c" stroke-width="1" opacity=".43">
+    <path d="M875 268h65l32-22m228-85 33-13h71M1185 281h65l27-17h40"/>
+    <path d="M842 138h52m-31 158h59M1304 196h36" stroke-dasharray="3 5"/>
+    <circle cx="875" cy="268" r="3"/><circle cx="1304" cy="148" r="3"/>
+    <circle cx="1317" cy="264" r="3"/>
+    <use href="#art-plus" x="842" y="138"/>
+    <use href="#art-plus" x="1298" y="298"/>
+  </g>
+  <g fill="none" stroke="#8eb06a" opacity=".58">
+    <path d="M1046 133v68M1211 187v68M945 181v68M1108 232v68" stroke-dasharray="3 5"/>
+    <use href="#plate" transform="matrix(.94 .26 -.86 .39 1041 200)" stroke-width="1.35"/>
+  </g>
+  <g transform="matrix(.94 .26 -.86 .39 1041 166)">
+    <use href="#plate" fill="#344727" stroke="#a0c773" stroke-width="1.7"/>
+    <path d="M23 98h147m-147-12h147" fill="none" stroke="#8cad66" stroke-opacity=".6"/>
+  </g>
+  <g transform="matrix(.94 .26 -.86 .39 1041 132)">
+    <use href="#plate" fill="#3d532a"/>
+    <use href="#plate" fill="url(#cover)" stroke="#d2fa97" stroke-width="2"/>
+    <path d="M13 23h164q5 0 5 5v73q0 6-5 6H17q-6 0-6-6V33" fill="none"
+      stroke="#dafaad" stroke-opacity=".44" stroke-dasharray="3 4"/>
+    <g fill="none" stroke="#e3ffc2" stroke-linecap="round" stroke-linejoin="round"
+      stroke-width="3" opacity=".85">
+      <path d="m77 51-12 13 12 13m39-26 12 13-12 13m-15-33-9 40"/>
+    </g>
+  </g>
+  <g fill="#d3f5a1">
+    <circle cx="945" cy="180" r="2.2"/>
+    <circle cx="1211" cy="187" r="2.2"/>
+    <circle cx="1108" cy="228" r="2.2"/>
+  </g>
+</svg>

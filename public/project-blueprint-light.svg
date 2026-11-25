@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="830 124 518 190">
+  <defs>
+    <linearGradient id="cover" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop stop-color="#f9faec"/>
+      <stop offset=".47" stop-color="#e3edcf"/>
+      <stop offset="1" stop-color="#b7cea4"/>
+    </linearGradient>
+    <linearGradient id="sheet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop stop-color="#f1f6e7" stop-opacity=".82"/>
+      <stop offset="1" stop-color="#a9c09b" stop-opacity=".50"/>
+    </linearGradient>
+    <path id="plate" d="M8 0h53q3 0 5 2l13 13h106q8 0 8 8v88q0 8-8 8H8q-8 0-8-8V8q0-8 8-8Z"/>
+  </defs>
+
+  <!-- Fine drafting marks tie the folder to the grid behind it. -->
+  <g fill="none" stroke="#729266" opacity=".57" stroke-linecap="round">
+    <path d="M873 264h51l29-18m251-85 32-13h62M1190 280h65l31-18h32"/>
+    <path d="M842 142h48m406 51h37m-472 103h56" stroke-dasharray="2 5"/>
+    <path d="M838 142h8m-4-4v8m470 143h8m-4-4v8"/>
+    <circle cx="873" cy="264" r="3"/>
+    <circle cx="1298" cy="148" r="3"/>
+    <circle cx="1318" cy="262" r="3"/>
+  </g>
+
+  <!-- The base is an outline so the header grid remains visible through it. -->
+  <g fill="none" stroke="#698760" opacity=".65">
+    <path d="M943 180v69m270-62v69m-106-26v68" stroke-dasharray="3 5"/>
+    <g transform="matrix(.94 .26 -.86 .39 1041 200)">
+      <use href="#plate" stroke-width="1.6"/>
+      <path d="M12 92v11q0 5 5 5h15m129 0h15q5 0 5-5V92" stroke-width="1.2"/>
+    </g>
+  </g>
+
+  <g transform="matrix(.94 .26 -.86 .39 1041 169)">
+    <use href="#plate" fill="url(#sheet)" stroke="#77966d" stroke-width="1.65"/>
+    <path d="M26 85h128m-128 11h92" fill="none" stroke="#67865e" stroke-opacity=".56"/>
+  </g>
+
+  <g transform="matrix(.94 .26 -.86 .39 1041 132)">
+    <use href="#plate" y="5" fill="#78946d" fill-opacity=".46"/>
+    <use href="#plate" fill="url(#cover)" stroke="#648258" stroke-width="1.8"/>
+    <path d="M10 9h48l15 14h109" fill="none" stroke="#fffef2" stroke-width="2"/>
+    <path d="M10 31v71q0 6 6 6h161q6 0 6-6V31" fill="none"
+      stroke="#6f9066" stroke-opacity=".46" stroke-dasharray="3 4"/>
+    <path d="m77 51-12 13 12 13m39-26 12 13-12 13m-15-33-9 40"
+      fill="none" stroke="#3e6146" stroke-linecap="round" stroke-linejoin="round"
+      stroke-width="3"/>
+  </g>
+</svg>

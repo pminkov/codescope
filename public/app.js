@@ -1091,7 +1091,6 @@ function renderJob() {
 function updateHeader() {
   const busy = ['queued', 'running'].includes(data.job?.status);
   document.title = `${data.name} · CodeScope`;
-  selectElement('#project-name').textContent = data.name;
   selectElement('#project-info-title').textContent = data.name;
   selectElement('#project-path').textContent = data.root;
   selectElement('#project-path').title = data.root;
@@ -1510,7 +1509,6 @@ function renderEmptyWorkspace() {
   diagramObserver?.disconnect();
   diagramObserver = undefined;
   document.title = 'CodeScope · Understand your projects';
-  selectElement('#project-name').textContent = 'CodeScope';
   selectElement('#project-actions').open = false;
   selectElement('#project-actions').hidden = true;
   selectElement('#project-info-dialog').close();
@@ -1682,14 +1680,12 @@ async function initializeApp() {
       );
     }
 
-    // Show the registered name before the slower source scan finishes.
+    // Select the registered project before its slower source scan finishes.
     const project = projects.find(
       // Match direct links and restored project selections against the registry.
       (entry) => entry.id === currentRoute().id,
     );
-    if (project) {
-      selectElement('#project-name').textContent = project.name;
-    }
+    if (project) selectElement('#project-picker').value = project.id;
 
     await loadCurrentProject();
   } catch (error) {
