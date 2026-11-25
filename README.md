@@ -80,6 +80,7 @@ CODESCOPE_DATA_DIR="/path/to/data" PORT=4311 npm start
 - `CODESCOPE_CODEX_BIN`: path to Codex; defaults to `codex`.
 - `PORT`: local port; defaults to `4310`.
 
+Open **Settings** in the toolbar to see and copy the active data folder.
 Project paths are stored in `<data directory>/projects.json`. Source files stay
 in their original folders. Copy the existing data directory's contents to keep
 saved projects and analyses when changing its location.

@@ -199,6 +199,11 @@ export function createApp({
           return json(await runnerStatus());
         }
 
+        if (url.pathname === '/api/settings') {
+          if (request.method === 'POST') throw fail('Method not allowed.', 405);
+          return json({ dataDirectory: store.directory });
+        }
+
         const ask = url.pathname.match(/^\/api\/projects\/([a-zA-Z0-9_-]+)\/ask$/);
         if (ask) {
           if (request.method !== 'POST') throw fail('Use POST to ask a question.', 405);

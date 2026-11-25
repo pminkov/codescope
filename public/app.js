@@ -61,6 +61,7 @@ let jobInputKind = 'prompt';
 const jobDismissals = createJobDismissals();
 let loadSequence = 0;
 let directoryPickerRequest;
+let settingsRequest = 0;
 let deletingNode = false;
 let deletingProject = false;
 let renamingProject = false;
@@ -1539,6 +1540,49 @@ function renderEmptyWorkspace() {
   selectElement('#view').innerHTML = renderEmptyProjectWorkspace();
 }
 
+// Load application settings each time the storage dialog opens.
+async function showAppSettings() {
+  const dialog = selectElement('#settings-dialog');
+  if (dialog.open) return;
+
+  const request = ++settingsRequest;
+  const storage = selectElement('#settings-storage');
+  const status = selectElement('#settings-status');
+  storage.hidden = true;
+  status.textContent = 'Loading storage location…';
+  dialog.showModal();
+
+  try {
+    const { dataDirectory } = await fetchJson('/api/settings');
+    if (!dialog.open || request !== settingsRequest) return;
+
+    selectElement('#settings-data-directory').textContent = dataDirectory;
+    storage.hidden = false;
+    status.textContent = '';
+  } catch {
+    if (!dialog.open || request !== settingsRequest) return;
+    status.textContent = 'Could not load the data folder. Close and reopen Settings to retry.';
+  }
+}
+
+// Copy the displayed path and report the result within the current settings dialog.
+async function copyDataDirectory() {
+  const dialog = selectElement('#settings-dialog');
+  const request = settingsRequest;
+  const path = selectElement('#settings-data-directory').textContent;
+  let message;
+
+  try {
+    await navigator.clipboard.writeText(path);
+    message = 'Path copied.';
+  } catch {
+    message = 'Could not copy automatically. You can select and copy the path above.';
+  }
+
+  if (dialog.open && request === settingsRequest)
+    selectElement('#settings-status').textContent = message;
+}
+
 // Show the current project's directory and stack without crowding its page header.
 function showProjectInfo() {
   if (!data || deletingProject) return;
@@ -2041,6 +2085,11 @@ selectElement('#action-dialog').addEventListener('click', (event) => {
   )
     event.target.close('no');
 });
+// Open application settings from the toolbar, independent of the current project.
+selectElement('#app-settings').addEventListener('click', showAppSettings);
+// Copy the exact storage path shown in Settings.
+selectElement('#copy-data-directory').addEventListener('click', copyDataDirectory);
+
 // Open project metadata from the first item in its overflow menu.
 selectElement('#project-info').addEventListener('click', showProjectInfo);
 
@@ -2213,6 +2262,7 @@ document.addEventListener('keydown', (event) => {
     !selectElement('#source-dialog').open &&
     !selectElement('#job-prompts-dialog').open &&
     !selectElement('#project-dialog').open &&
+    !selectElement('#settings-dialog').open &&
     !selectElement('#project-info-dialog').open &&
     !selectElement('#rename-project-dialog').open &&
     !selectElement('#action-dialog').open &&

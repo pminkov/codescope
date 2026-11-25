@@ -182,6 +182,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 .icon-button { width: 32px; height: 32px; background: transparent; border: 1px solid var(--border); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
 .icon-button:hover { background: var(--hover); color: var(--text); }
+.topbar-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+.topbar-actions .icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--panel);
+}
+.topbar-actions .icon-button:hover { background: var(--hover); }
 main { padding-bottom: 32px; }
 
 .button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid var(--border); background: var(--panel); border-radius: 6px; font-size: 1rem; font-weight: 500; }
@@ -615,7 +623,7 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
   min-width: 0;
 }
 .project-picker-field { position: relative; min-width: 0; width: 184px; }
-.project-bar select, .project-bar .button, #theme-toggle {
+.project-bar select, .project-bar .button {
   min-height: 36px;
   border-radius: 8px;
   font-size: .875rem;
@@ -655,8 +663,6 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 }
 .project-bar .button { flex: 0 0 auto; padding: 5px 12px; white-space: nowrap; }
 .project-bar .project-add-mark { color: var(--green); }
-#theme-toggle { flex: 0 0 36px; background: var(--panel); }
-#theme-toggle:hover { background: var(--hover); }
 
 @media (max-width: 800px) {
   :root { --page-gutter: 16px; }
@@ -1091,17 +1097,45 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
   .project-actions .actions-menu { max-width: calc(100vw - 64px); }
 }
 
-/* Keep project metadata readable in a compact, scrollable dialog. */
-#project-info-dialog { width: min(620px, calc(100vw - 32px)); height: fit-content; max-height: calc(100dvh - 48px); overflow: hidden; }
-#project-info-dialog .source-heading { align-items: flex-start; flex-shrink: 0; }
+/* Keep metadata readable in compact dialogs with scrollable bodies. */
+#project-info-dialog, #settings-dialog {
+  width: min(620px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+#project-info-dialog .source-heading, #settings-dialog .source-heading { flex-shrink: 0; }
+#project-info-dialog .source-heading { align-items: flex-start; }
 #project-info-dialog .source-heading > div { min-width: 0; }
-#project-info-title { font: 550 1.4rem/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-#close-project-info { flex-shrink: 0; font-size: 1.4375rem; }
+#project-info-title, #settings-title {
+  font: 550 1.4rem/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+#close-project-info, .settings-close { flex-shrink: 0; font-size: 1.4375rem; }
 .project-info-fields { display: grid; gap: 24px; margin: 5px 0 0; }
 .project-info-fields dt { color: var(--muted); font-size: .875rem; font-weight: 500; }
 .project-info-fields dd { margin: 8px 0 0; }
 #project-path { padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--input); font-size: .875rem; line-height: 1.7; overflow-wrap: anywhere; }
 .stack-empty { color: var(--faint); font-size: .875rem; }
+
+#settings-title { margin: 0; }
+.settings-heading { margin: 3px 0 6px; font-size: 1rem; font-weight: 600; }
+.settings-description, .settings-note, .settings-status { color: var(--muted); font-size: .875rem; }
+.settings-description { margin: 0 0 12px; }
+.settings-location {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+}
+.settings-location code { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.settings-location .button { flex: 0 0 auto; padding: 5px 9px; font-size: .875rem; }
+.settings-note, .settings-status { margin: 10px 0 0; }
+.settings-note code { overflow-wrap: anywhere; }
+.settings-status:empty { margin: 0; }
 
 /* Keep progress menus inside the viewport when their trigger sits on the right. */
 .job-actions .actions-menu { left: auto; right: 0; }

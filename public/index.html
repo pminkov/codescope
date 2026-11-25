@@ -61,13 +61,25 @@
           </a>
         </h1>
         <div class="brand-blueprint" aria-hidden="true"></div>
-        <button
-          id="theme-toggle"
-          class="icon-button"
-          type="button"
-          aria-label="Switch to light theme"
-          title="Switch theme"
-        ></button>
+        <div class="topbar-actions">
+          <button
+            id="theme-toggle"
+            class="icon-button"
+            type="button"
+            aria-label="Switch to light theme"
+            title="Switch theme"
+          ></button>
+          <button
+            id="app-settings"
+            class="icon-button"
+            type="button"
+            aria-label="Settings"
+            title="Settings"
+            aria-haspopup="dialog"
+            aria-controls="settings-dialog"
+            data-icon="settings"
+          ></button>
+        </div>
       </div>
     </header>
     <main>
@@ -190,6 +202,27 @@
           <p class="job-prompt-location"><span id="job-input-label">Saved prompt</span><code id="job-prompt-path"></code></p>
           <pre id="job-prompt-text" tabindex="0" aria-label="Exact prompt sent to Codex"></pre>
         </div>
+      </div>
+    </dialog>
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <form class="source-heading" method="dialog">
+        <h2 id="settings-title">Settings</h2>
+        <button class="icon-button settings-close" aria-label="Close settings" autofocus>×</button>
+      </form>
+      <div class="node-dialog-body">
+        <h3 class="settings-heading">Data folder</h3>
+        <p class="settings-description">CodeScope stores saved analyses and job history here.</p>
+        <div id="settings-storage" hidden>
+          <div class="settings-location">
+            <code id="settings-data-directory"></code>
+            <button class="button" id="copy-data-directory" type="button">Copy path</button>
+          </div>
+          <p class="settings-note">
+            Each project’s saved analysis JSON is in
+            <code>projects/&lt;project-id&gt;/understanding.json</code> inside this folder.
+          </p>
+        </div>
+        <p class="settings-status" id="settings-status" role="status"></p>
       </div>
     </dialog>
     <dialog id="project-info-dialog" aria-labelledby="project-info-title">

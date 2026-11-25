@@ -2644,6 +2644,16 @@ test('HTTP project APIs, direct routes, method rules, and origin boundaries work
       body: JSON.stringify(body),
     });
 
+  const settings = await fetch(`${base}/api/settings`);
+  assert.equal(settings.status, 200);
+  assert.deepEqual(await settings.json(), { dataDirectory: setup.dataDirectory });
+  assert.equal((await post('/api/settings', {})).status, 405);
+  assert.equal(
+    (await fetch(`${base}/api/settings`, { headers: { Origin: 'https://untrusted.example' } }))
+      .status,
+    403,
+  );
+
   assert.equal((await fetch(`${base}/api/choose-directory`)).status, 405);
   const routerAsset = await fetch(`${base}/graph-routing.js`);
   assert.equal(routerAsset.status, 200);
