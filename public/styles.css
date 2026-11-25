@@ -21,9 +21,6 @@
   --brand-bar-line: #3a4531;
   --brand-bar-start: #20251a;
   --brand-bar-end: #111410;
-  --brand-blueprint-image: url('/project-blueprint.svg');
-  --brand-blueprint-glow: #94bc4e30;
-  --brand-blueprint-grid: #90a56d25;
   --amber: #d4ba83;
   --amber-bg: #332e22;
   --amber-line: #645536;
@@ -57,9 +54,6 @@
   --brand-bar-line: #a9b49e;
   --brand-bar-start: #f4f5ec;
   --brand-bar-end: #e7ecdd;
-  --brand-blueprint-image: url('/project-blueprint-light.svg');
-  --brand-blueprint-glow: #91b87924;
-  --brand-blueprint-grid: #5e794626;
   --amber: #806325;
   --amber-bg: #e8dfc5;
   --amber-line: #c8b47f;
@@ -122,24 +116,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 ::selection { color: var(--bg); background: var(--green); }
 .icon { width: 18px; height: 18px; flex: 0 0 auto; vertical-align: middle; }
 .topbar {
-  position: relative;
   border-bottom: 1px solid var(--brand-bar-line);
-  background:
-    radial-gradient(ellipse at 76% 48%, var(--brand-blueprint-glow), transparent 53%),
-    linear-gradient(125deg, var(--brand-bar-start), var(--brand-bar-end));
-}
-
-/* Center the fading drafting grid behind the brand artwork. */
-.topbar::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 0 40%;
-  background-image:
-    linear-gradient(to right, var(--brand-blueprint-grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--brand-blueprint-grid) 1px, transparent 1px);
-  background-size: 18px 18px;
-  mask-image: radial-gradient(ellipse at 65% 48%, black, transparent 76%);
-  pointer-events: none;
+  background: linear-gradient(125deg, var(--brand-bar-start), var(--brand-bar-end));
 }
 .topbar-content, main {
   max-width: 1440px;
@@ -147,11 +125,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
   padding-inline: var(--page-gutter);
 }
 .topbar-content {
-  position: relative;
-  min-height: 94px;
-  padding-block: 15px;
+  padding-block: clamp(3px, .75vw, 10px);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: clamp(10px, 2vw, 24px);
 }
 .brand-heading { flex: 0 0 auto; margin: 0; }
@@ -171,14 +148,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
   flex: 0 0 auto;
   color: var(--green);
   filter: drop-shadow(2px 2px 0 var(--brand-echo));
-}
-.brand-blueprint {
-  flex: 0 1 246px;
-  min-width: 0;
-  margin-inline-start: auto;
-  aspect-ratio: 518 / 190;
-  background: var(--brand-blueprint-image) center / contain no-repeat;
-  pointer-events: none;
 }
 i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 .icon-button { width: 32px; height: 32px; background: transparent; border: 1px solid var(--border); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
@@ -667,8 +636,6 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 
 @media (max-width: 800px) {
   :root { --page-gutter: 16px; }
-  .topbar-content { min-height: 76px; }
-  .brand-blueprint { flex-basis: 192px; }
   .tabs { gap: 8px; }
 }
 
@@ -678,10 +645,8 @@ dialog::backdrop { background: #08100cc4; backdrop-filter: blur(4px); }
 }
 
 @media (max-width: 480px) {
-  .topbar-content { min-height: 64px; }
   .brand { font-size: 1.25rem; }
   .brand-icon { width: 22px; height: 22px; }
-  .brand-blueprint { flex-basis: 148px; }
 }
 
 .primary { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
