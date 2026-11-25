@@ -3,13 +3,14 @@
   --analysis-content-padding: 33px 28px 36px;
   --page-gutter: clamp(28px, 5vw, 72px);
   --project-layout-gap: 14px;
-  --bg: #10130f;
+  --bg: #101416;
   --panel: #181c17;
   --panel-raised: #252c22;
   --hover: #282f24;
   --input: #151914;
   --text: #edf0e6;
   --muted: #aab2a2;
+  --tab-label: #b8c0b1;
   --faint: #909985;
   --border: #30392d;
   --soft-border: #282f25;
@@ -18,9 +19,8 @@
   --green-bg: #263123;
   --green-line: #4a5d3a;
   --brand-echo: #456952;
-  --brand-bar-line: #3a4531;
-  --brand-bar-start: #20251a;
-  --brand-bar-end: #111410;
+  --brand-bar-line: #33413d;
+  --brand-bar-bg: #121c1c;
   --amber: #d4ba83;
   --amber-bg: #332e22;
   --amber-line: #645536;
@@ -43,6 +43,7 @@
   --input: #e8eadf;
   --text: #263d2e;
   --muted: #58695d;
+  --tab-label: #606a62;
   --faint: #606f63;
   --border: #c3cbbc;
   --soft-border: #d2d8c9;
@@ -52,8 +53,7 @@
   --green-line: #9cb59d;
   --brand-echo: #a6c79d;
   --brand-bar-line: #a9b49e;
-  --brand-bar-start: #f4f5ec;
-  --brand-bar-end: #e7ecdd;
+  --brand-bar-bg: #f4f5ec;
   --amber: #806325;
   --amber-bg: #e8dfc5;
   --amber-line: #c8b47f;
@@ -117,7 +117,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 .icon { width: 18px; height: 18px; flex: 0 0 auto; vertical-align: middle; }
 .topbar {
   border-bottom: 1px solid var(--brand-bar-line);
-  background: linear-gradient(125deg, var(--brand-bar-start), var(--brand-bar-end));
+  background: var(--brand-bar-bg);
 }
 .topbar-content, main {
   max-width: 1440px;
@@ -185,9 +185,9 @@ main { padding-bottom: 32px; }
   gap: 6px;
   padding: 9px 8px;
   border-radius: 8px;
-  color: var(--muted);
+  color: var(--tab-label);
   font-size: .875rem;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 .tabs > a .icon { width: 15px; height: 15px; }
