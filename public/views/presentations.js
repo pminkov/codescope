@@ -146,7 +146,7 @@ export function renderPresentationsView(project, selected, {
         </div>
         ${renderAnalysisFreshness(selected.review)}
         <div class="presentation-toolbar">
-          <button type="button" class="button primary" data-presentation-action="present">
+          <button type="button" class="button" data-presentation-action="present">
             Present
           </button>
           <a class="button" href="${exportUrl}?format=html" download>Download HTML</a>
