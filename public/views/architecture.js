@@ -1,11 +1,11 @@
 import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
+import { renderSavedAnalysisListHeader } from '../ui/new-analysis.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisLabel,
-  renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
 // Render a saved architecture view's navigation entry.
@@ -47,31 +47,15 @@ function renderGraphNode(node) {
   `;
 }
 
-// Compose architecture navigation and the focused diagram question form.
-function renderArchitectureNavigation(views, selected, { draft, busy, projectUrl }) {
+// Show the saved architecture diagrams and the action for creating another.
+function renderArchitectureNavigation(views, selected, { actionsBusy, projectUrl }) {
   return /* HTML */ `
     <aside class="sidebar architecture-sidebar" aria-label="Architecture navigation">
       <div class="sidebar-heading">
         <h2>Architecture views</h2>
-        <span class="tiny-label">${views.length} SAVED</span>
       </div>
       <p class="sidebar-description">Explore the whole system or focus on a smaller part.</p>
-      <form id="architecture-form" class="flow-composer">
-        <label for="architecture-question">Ask an architecture question</label>
-        ${renderAnalysisTextarea({
-          id: 'architecture-question',
-          rows: 4,
-          placeholder: 'How does authentication fit together?',
-          draft,
-          busy,
-          required: true,
-        })}
-        <p class="composer-hint">Each question adds a saved, source-linked diagram.</p>
-        <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
-          Generate diagram
-        </button>
-        <p class="architecture-error flow-error" role="alert"></p>
-      </form>
+      ${renderSavedAnalysisListHeader('architecture', views.length, actionsBusy)}
       <div class="flow-options">
         ${views
           .map(
@@ -136,11 +120,11 @@ function groupGraphLevels(graph) {
 }
 
 // Compose a saved architecture diagram and its evidence.
-export function renderArchitectureView(project, graph, { draft, projectUrl, actionsBusy }) {
+export function renderArchitectureView(project, graph, { projectUrl, actionsBusy }) {
   const views = project.architectures || [];
-  const busy = ['queued', 'running'].includes(project.job?.status);
-  const navigation = renderArchitectureNavigation(views, graph, { draft, busy, projectUrl });
+  const navigation = renderArchitectureNavigation(views, graph, { actionsBusy, projectUrl });
   if (!graph) {
+    const busy = ['queued', 'running'].includes(project.job?.status);
     const message = busy
       ? 'Analysis is in progress. Saved diagrams will appear here as they finish.'
       : 'Ask a question to diagram a subsystem, boundary, or dependency.';

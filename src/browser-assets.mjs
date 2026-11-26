@@ -14,6 +14,7 @@ export const assets = {
   '/ui/source-links.js': ['ui/source-links.js', 'text/javascript'],
   '/ui/source-preview.js': ['ui/source-preview.js', 'text/javascript'],
   '/ui/analysis-controls.js': ['ui/analysis-controls.js', 'text/javascript'],
+  '/ui/new-analysis.js': ['ui/new-analysis.js', 'text/javascript'],
   '/views/directories.js': ['views/directories.js', 'text/javascript'],
   '/views/flows.js': ['views/flows.js', 'text/javascript'],
   '/views/architecture.js': ['views/architecture.js', 'text/javascript'],

@@ -1,11 +1,11 @@
 import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
+import { renderSavedAnalysisListHeader } from '../ui/new-analysis.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisLabel,
-  renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
 // Render a saved nouns analysis in the scope navigation.
@@ -92,15 +92,11 @@ function renderNounRelationships(analysis) {
   `;
 }
 
-// Compose the scoped nouns form, saved analyses, and selected concept inventory.
-export function renderNounsView(project, selected, { draft, projectUrl, actionsBusy }) {
+// Compose saved noun analyses and the selected concept inventory.
+export function renderNounsView(project, selected, { projectUrl, actionsBusy }) {
   const analyses = project.nounAnalyses || [];
   const busy = ['queued', 'running'].includes(project.job?.status);
-  const navigation = renderNounsNavigation(analyses, selected, {
-    draft,
-    busy,
-    projectUrl,
-  });
+  const navigation = renderNounsNavigation(analyses, selected, { actionsBusy, projectUrl });
   const content = renderNounsContent(project, selected, { busy, actionsBusy });
   return /* HTML */ `
     <div class="workspace nouns-workspace">
@@ -136,33 +132,15 @@ export function renderNounDetails(noun) {
   `;
 }
 
-// Render scope requests and saved noun-analysis navigation.
-function renderNounsNavigation(analyses, selected, { draft, busy, projectUrl }) {
+// Show saved noun analyses and the action for analyzing another scope.
+function renderNounsNavigation(analyses, selected, { actionsBusy, projectUrl }) {
   return /* HTML */ `
     <aside class="sidebar nouns-sidebar" aria-label="Nouns analysis navigation">
       <div class="sidebar-heading">
         <h2>Nouns analyses</h2>
-        <span class="tiny-label">${analyses.length} SAVED</span>
       </div>
       <p class="sidebar-description">Main concepts, their responsibilities, and relationships.</p>
-      <form id="nouns-form" class="flow-composer">
-        <label for="nouns-scope">Scope (optional)</label>
-        ${renderAnalysisTextarea({
-          id: 'nouns-scope',
-          rows: 4,
-          placeholder: 'For example: job processing in src/storage.mjs',
-          draft,
-          busy,
-          required: false,
-        })}
-        <p class="composer-hint">
-          Leave blank for the whole project. Each run saves a separate analysis.
-        </p>
-        <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
-          Analyze nouns
-        </button>
-        <p class="flow-error" role="alert"></p>
-      </form>
+      ${renderSavedAnalysisListHeader('nouns', analyses.length, actionsBusy)}
       <div class="flow-options">
         ${analyses
           .map(

@@ -1,5 +1,4 @@
 /* Share the same slide styling between the workspace and offline HTML exports. */
-.presentation-sidebar .flow-composer { margin: 18px 0 24px; }
 .presentation-content { min-width: 0; padding: 28px; }
 .presentation-content .content-heading h2 { margin-bottom: 6px; }
 .presentation-content .content-heading p { color: var(--muted); margin: 0; }
@@ -82,7 +81,6 @@
 .presentation-stage:fullscreen .deck-slide { max-height: calc(100dvh - 64px); aspect-ratio: auto; }
 .presentation-stage.is-presenting .deck-slide { max-height: calc(100dvh - 64px); aspect-ratio: auto; }
 .presentation-stage:fullscreen .presentation-controls { position: relative; }
-.presentation-empty .flow-composer { max-width: 560px; margin: 0 auto; text-align: left; }
 
 /* Offline decks use the same HTML and SVG with no external assets or scripts. */
 .deck-export { margin: 0; color: #eaf1ed; background: #091715; font-family: sans-serif; }

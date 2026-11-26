@@ -2,29 +2,12 @@ import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderPresentationDiagram } from '../ui/presentation-diagram.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
+import { renderNewAnalysisButton, renderSavedAnalysisListHeader } from '../ui/new-analysis.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisLabel,
-  renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
-
-// Collect a topic while preserving the draft and the shared worker's busy state.
-function renderPresentationComposer(draft, busy) {
-  return /* HTML */ `
-    <form id="presentation-form" class="flow-composer">
-      <label for="presentation-topic">Presentation topic</label>
-      ${renderAnalysisTextarea({
-        id: 'presentation-topic', rows: 4, required: true, draft, busy,
-        placeholder: 'Explain how this project processes a request, from start to finish.',
-      })}
-      <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
-        Create presentation
-      </button>
-      <p class="flow-error" role="alert"></p>
-    </form>
-  `;
-}
 
 // Render the visual slide independently from navigation, notes, and browser state.
 export function renderPresentationSlide(slide, index, total, projectName) {
@@ -70,9 +53,8 @@ export function renderPresentationNotes(slide) {
 
 // Render a deck workspace with saved decks, slide outline, and presenter controls.
 export function renderPresentationsView(project, selected, {
-  draft, projectUrl, actionsBusy, slideIndex = 0,
+  projectUrl, actionsBusy, slideIndex = 0,
 }) {
-  const busy = ['queued', 'running'].includes(project.job?.status);
   if (!selected) return /* HTML */ `
     <article class="empty-analysis presentation-empty">
       <span class="eyebrow">PRESENTATION</span>
@@ -84,7 +66,7 @@ export function renderPresentationsView(project, selected, {
       <div class="presentation-types" aria-label="Available diagram types">
         <span>System maps</span><span>Request journeys</span><span>Module details</span>
       </div>
-      ${renderPresentationComposer(draft, busy)}
+      ${renderNewAnalysisButton('presentations', actionsBusy)}
     </article>
   `;
   const slide = selected.slides[slideIndex];
@@ -95,9 +77,9 @@ export function renderPresentationsView(project, selected, {
       <aside class="sidebar presentation-sidebar" aria-label="Presentation navigation">
         <div class="sidebar-heading">
           <h2>Presentations</h2>
-          <span class="tiny-label">${project.presentations.length} SAVED</span>
         </div>
-        ${renderPresentationComposer(draft, busy)}
+        <p class="sidebar-description">Explore your codebase through slides and diagrams.</p>
+        ${renderSavedAnalysisListHeader('presentations', project.presentations.length, actionsBusy)}
         <nav class="flow-options presentation-decks" aria-label="Saved presentations">
           ${project.presentations.map(
             // Keep every saved deck independently addressable and selectable.

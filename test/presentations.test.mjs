@@ -15,7 +15,6 @@ import { getJobAnalysisTargets } from '../public/job-progress.js';
 import { renderPresentationsView, renderPresentationDocument }
   from '../public/views/presentations.js';
 import { renderPresentationDiagram } from '../public/ui/presentation-diagram.js';
-import { escapeHtml } from '../public/content.js';
 import { createPresentationResult } from './presentation-fixtures.mjs';
 
 // Isolate source and JSON storage while injecting deterministic presentation generation.
@@ -241,7 +240,7 @@ test('presentation HTTP APIs generate decks and export original JSON and standal
     assert.equal((await fetch(`${download}?format=json`)).status, 404);
   });
 
-// Escape all generated text while preserving draft content, notes, and diagram semantics.
+// Escape generated presentation text while preserving notes and diagram semantics.
 test('presentation views escape content and render every custom diagram type', () => {
   const deck = { ...createPresentationResult(), id: 'saved' };
   const attack = '</textarea><img src=x onerror=alert(1)> & `value`';
@@ -250,7 +249,7 @@ test('presentation views escape content and render every custom diagram type', (
   deck.slides[1].diagram.nodes[0].title = attack;
   const project = { id: 'demo', name: '<Demo>', presentations: [deck] };
   const options = {
-    draft: `\n  ${attack}`, actionsBusy: false, slideIndex: 1,
+    actionsBusy: false, slideIndex: 1,
     // Mirror the application's deck navigation URLs.
     projectUrl: (tab, id) => `/projects/demo/${tab}/${id}`,
   };
@@ -260,11 +259,11 @@ test('presentation views escape content and render every custom diagram type', (
   assert.match(html, /data-presentation-slide="1"[\s\S]*?aria-current="step"/);
   assert.match(html, /data-analysis-kind="presentations"/);
   assert.match(html, /data-source="src\/main.ts"/);
-  assert.equal(html.match(/<textarea\b[^>]*>([\s\S]*?)<\/textarea>/)[1],
-    escapeHtml(options.draft));
-  const empty = renderPresentationsView({ ...project, job: { status: 'running' } }, null, options);
+  assert.match(html, /data-new-analysis="presentations"/);
+  assert.doesNotMatch(html, /<textarea/);
+  const empty = renderPresentationsView(project, null, { ...options, actionsBusy: true });
   assert.match(empty, /Turn your codebase into a story/);
-  assert.match(empty, /<textarea[\s\S]*?disabled/);
+  assert.match(empty, /data-new-analysis="presentations"[^>]*\bdisabled/);
   const document = renderPresentationDocument(deck, project.name, '.deck-slide {}');
   assert.doesNotMatch(document, /<img|<script|<textarea/);
   assert.match(document, /&lt;\/textarea&gt;/);

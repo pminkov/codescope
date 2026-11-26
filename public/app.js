@@ -1,5 +1,6 @@
 import { renderIcon } from './ui/icons.js';
 import { renderAnalysisChanges, formatAnalysisDate } from './ui/analysis-controls.js';
+import { renderNewAnalysisFormContent } from './ui/new-analysis.js';
 import { renderSourcePreview } from './ui/source-preview.js';
 import {
   renderEmptyDemoView, renderEmptyProjectWorkspace, renderProjectLoadError,
@@ -70,12 +71,9 @@ let deletingNode = false;
 let deletingProject = false;
 let renamingProject = false;
 let analysisActionPending = false;
-const flowDrafts = new Map();
-const architectureDrafts = new Map();
-const nounsDrafts = new Map();
-const areasDrafts = new Map();
-const sequenceDrafts = new Map();
-const presentationDrafts = new Map();
+const analysisDrafts = new Map();
+const newAnalysisDialog = selectElement('#new-analysis-dialog');
+const newAnalysisForm = selectElement('#new-analysis-form');
 const presentationSlides = new Map();
 const modificationDrafts = new Map();
 const projectTabs = [
@@ -90,14 +88,6 @@ const projectTabs = [
   'presentations',
   'all',
 ];
-const analysisForms = {
-  'flow-form': { action: 'flows', field: 'feature', drafts: flowDrafts },
-  'architecture-form': { action: 'architecture', field: 'question', drafts: architectureDrafts },
-  'sequence-form': { action: 'sequences', field: 'question', drafts: sequenceDrafts },
-  'areas-form': { action: 'areas', field: 'scope', drafts: areasDrafts },
-  'nouns-form': { action: 'nouns', field: 'scope', drafts: nounsDrafts },
-  'presentation-form': { action: 'presentations', field: 'topic', drafts: presentationDrafts },
-};
 const jobTypeLabels = {
   initial: 'Directories + architecture',
   directories: 'Directories',
@@ -342,11 +332,10 @@ function selectedPresentationIndex(deck) {
   return Math.min(presentationSlides.get(`${data.id}:${deck.id}`) || 0, deck.slides.length - 1);
 }
 
-// Render a topic composer and the selected presentation's current HTML slide.
+// Render the selected presentation at its current slide.
 function renderPresentations() {
   const deck = getSelectedPresentation();
   selectElement('#view').innerHTML = renderPresentationsView(data, deck, {
-    draft: presentationDrafts.get(data.id) || '',
     projectUrl,
     actionsBusy: isAnalysisBusy(),
     slideIndex: deck ? selectedPresentationIndex(deck) : 0,
@@ -411,7 +400,6 @@ function renderFlows() {
       (flow) => flow.id === currentRoute().selection,
     ) || data.flows[0];
   selectElement('#view').innerHTML = renderFlowsView(data, selected, {
-    draft: getAnalysisRequest('flows', flowDrafts),
     detailState,
     projectUrl,
     actionsBusy: isAnalysisBusy(),
@@ -456,14 +444,6 @@ function isAnalysisBusy() {
   return analysisActionPending || ['queued', 'running'].includes(data?.job?.status);
 }
 
-// Prefer an explicit draft, including an empty one, over the generated suggestion.
-function getAnalysisRequest(kind, drafts) {
-  if (drafts.has(data.id)) return drafts.get(data.id);
-  const suggestion = data.nextPrompts?.[kind];
-
-  return typeof suggestion === 'string' ? suggestion : '';
-}
-
 // Resolve a saved map independently of its selected nested area.
 function getSelectedAreasAnalysis() {
   const id = currentRoute().selection.split('/')[0];
@@ -478,7 +458,6 @@ function getSelectedAreasAnalysis() {
 // Render only the selected map level while keeping its hierarchy in the URL.
 function renderAreas() {
   selectElement('#view').innerHTML = renderAreasView(data, getSelectedAreasAnalysis(), {
-    draft: areasDrafts.get(data.id) || '',
     areaId: currentRoute().selection.split('/')[1] || '',
     projectUrl,
     actionsBusy: isAnalysisBusy(),
@@ -521,10 +500,9 @@ function openNounDetails(id) {
   if (!dialog.open) dialog.showModal();
 }
 
-// Render nouns using the selected result and the current request draft.
+// Render the selected noun inventory and its saved scopes.
 function renderNouns() {
   selectElement('#view').innerHTML = renderNounsView(data, getSelectedNounsAnalysis(), {
-    draft: getAnalysisRequest('nouns', nounsDrafts),
     projectUrl,
     actionsBusy: isAnalysisBusy(),
   });
@@ -621,7 +599,6 @@ function stepSequenceMessage(direction) {
 function renderSequences() {
   const selected = getSelectedSequence();
   selectElement('#view').innerHTML = renderSequencesView(data, selected, {
-    draft: getAnalysisRequest('sequences', sequenceDrafts),
     projectUrl,
     actionsBusy: isAnalysisBusy(),
   });
@@ -680,7 +657,6 @@ function drawGraphEdges() {
 function renderArchitecture() {
   const graph = getSelectedArchitecture();
   selectElement('#view').innerHTML = renderArchitectureView(data, graph, {
-    draft: getAnalysisRequest('architecture', architectureDrafts),
     projectUrl,
     actionsBusy: isAnalysisBusy(),
   });
@@ -1188,6 +1164,8 @@ function renderProjectPicker() {
 // Load the current project, reject stale responses, and poll active jobs.
 async function loadCurrentProject({ quiet = false } = {}) {
   if (deletingProject) return;
+  if (newAnalysisDialog.open && newAnalysisDialog.dataset.route !== currentRouteLocation())
+    newAnalysisDialog.close();
   clearTimeout(pollTimer);
   const sequence = ++loadSequence;
   const id = currentRoute().id;
@@ -1351,6 +1329,75 @@ function analysisActionUrl(projectId, kind, id, action) {
   return `/api/projects/${projectId}/analyses/${kind}/${encodeURIComponent(id)}/${action}`;
 }
 
+// Restore this project's draft or suggested prompt in the shared creation dialog.
+function openNewAnalysisDialog(kind) {
+  const { id, tab } = currentRoute();
+  if (!data || isDemo || deletingProject || isAnalysisBusy() || newAnalysisDialog.open ||
+    id !== data.id || tab !== kind) return;
+
+  if (!analysisDrafts.has(id)) analysisDrafts.set(id, new Map());
+  const drafts = analysisDrafts.get(id);
+  const suggestion = data.nextPrompts?.[kind];
+  newAnalysisForm.innerHTML = renderNewAnalysisFormContent(kind, data.name);
+  const input = newAnalysisForm.querySelector('textarea');
+  input.value = drafts.get(kind) ?? (typeof suggestion === 'string' ? suggestion : '');
+
+  // Keep deliberate edits, including an emptied suggestion, when the dialog is dismissed.
+  input.addEventListener('input', () => {
+    drafts.set(kind, input.value);
+    input.setCustomValidity('');
+    selectElement('#new-analysis-error').textContent = '';
+  });
+  newAnalysisDialog.dataset.route = currentRouteLocation();
+  newAnalysisDialog.showModal();
+}
+
+// Start the requested analysis and hand the accepted job to the existing progress view.
+async function submitNewAnalysis(event) {
+  event.preventDefault();
+  const { id, tab } = currentRoute();
+  if (!newAnalysisDialog.open || newAnalysisDialog.dataset.route !== currentRouteLocation() ||
+    data?.id !== id || deletingProject || isAnalysisBusy()) return;
+
+  const input = newAnalysisForm.querySelector('textarea');
+  const prompt = input.value.trim();
+  if (input.required && !prompt) {
+    input.setCustomValidity('Enter a request before starting the analysis.');
+    input.reportValidity();
+    return;
+  }
+
+  const button = newAnalysisForm.querySelector('[type="submit"]');
+  const label = button.textContent;
+  const errorMessage = selectElement('#new-analysis-error');
+  errorMessage.textContent = '';
+  analysisActionPending = true;
+  input.readOnly = true;
+  button.disabled = true;
+  button.textContent = 'Starting…';
+
+  try {
+    const job = await postJson(projectApiUrl(tab), { [input.name]: prompt });
+    analysisDrafts.get(id)?.delete(tab);
+    if (data?.id !== id || currentRoute().id !== id) return;
+    data.job = job;
+    newAnalysisDialog.close();
+    renderJob();
+  } catch (error) {
+    if (newAnalysisDialog.open) errorMessage.textContent = error.message;
+    else if (currentRoute().id === id) showError(error.message);
+    return;
+  } finally {
+    analysisActionPending = false;
+    input.readOnly = false;
+    button.disabled = false;
+    button.textContent = label;
+    if (data && data.id === currentRoute().id) render();
+  }
+
+  await loadCurrentProject();
+}
+
 // Collect a modification request while preserving an unsent draft for this result.
 function promptForAnalysisModification(kind, id) {
   const dialog = selectElement('#modify-analysis-dialog');
@@ -1494,12 +1541,7 @@ async function deleteCurrentProject(id) {
 
   try {
     await postJson(`/api/projects/${id}/delete`);
-    flowDrafts.delete(id);
-    architectureDrafts.delete(id);
-    nounsDrafts.delete(id);
-    areasDrafts.delete(id);
-    sequenceDrafts.delete(id);
-    presentationDrafts.delete(id);
+    analysisDrafts.delete(id);
     await loadProjects();
     if (currentRoute().id === id) {
       ++sourceRequest;
@@ -1908,6 +1950,12 @@ document.addEventListener('click', (event) => {
     if (!menu.contains(event.target)) menu.open = false;
   });
 
+  const newAnalysis = event.target.closest('[data-new-analysis]');
+  if (newAnalysis) {
+    openNewAnalysisDialog(newAnalysis.dataset.newAnalysis);
+    return;
+  }
+
   const nounButton = event.target.closest('[data-noun]');
   if (nounButton) {
     openNounDetails(nounButton.dataset.noun);
@@ -2286,43 +2334,22 @@ selectElement('#project-form').addEventListener('submit', async (event) => {
     button.disabled = false;
   }
 });
-// Remember unsent analysis requests per project.
-document.addEventListener('input', (event) => {
-  if (event.target.id === 'flow-feature') flowDrafts.set(data.id, event.target.value);
-  if (event.target.id === 'architecture-question')
-    architectureDrafts.set(data.id, event.target.value);
-  if (event.target.id === 'sequence-question') sequenceDrafts.set(data.id, event.target.value);
-  if (event.target.id === 'areas-scope') areasDrafts.set(data.id, event.target.value);
-  if (event.target.id === 'nouns-scope') nounsDrafts.set(data.id, event.target.value);
-  if (event.target.id === 'presentation-topic')
-    presentationDrafts.set(data.id, event.target.value);
-});
-// Submit an independent analysis request and display validation failures.
-document.addEventListener('submit', async (event) => {
-  const form = analysisForms[event.target.id];
-  if (!form || deletingProject || !data) return;
-  event.preventDefault();
-  const projectId = data.id;
-  const feature = event.target.querySelector('textarea').value.trim();
-  if (!feature && !['nouns', 'areas'].includes(form.action)) return;
-  event.target.querySelector('button').disabled = true;
 
-  try {
-    const job = await postJson(`/api/projects/${projectId}/${form.action}`, {
-      [form.field]: feature,
-    });
-    form.drafts.delete(projectId);
-    if (data?.id === projectId) {
-      data.job = job;
-      await loadCurrentProject();
-    }
-  } catch (error) {
-    if (event.target.isConnected) {
-      event.target.querySelector('.flow-error').textContent = error.message;
-      event.target.querySelector('button').disabled = false;
-    }
-  }
+// Submit the shared form to the current analysis endpoint.
+newAnalysisForm.addEventListener('submit', submitNewAnalysis);
+
+// Dismiss the new-analysis form from either close control or its backdrop.
+newAnalysisDialog.addEventListener('click', (event) => {
+  if (event.target === newAnalysisDialog || event.target.closest('[data-close-new-analysis]'))
+    newAnalysisDialog.close();
 });
+
+// Return focus to the current trigger even if the project view refreshed behind the dialog.
+newAnalysisDialog.addEventListener('close', () => {
+  if (!newAnalysisDialog.open && newAnalysisDialog.dataset.route === currentRouteLocation())
+    selectElement('[data-new-analysis]:enabled')?.focus({ preventScroll: true });
+});
+
 // Restore the current project view after browser history navigation.
 window.addEventListener('popstate', () => {
   if (isDemo) render();
@@ -2366,18 +2393,7 @@ document.addEventListener('keydown', (event) => {
   }
   if (
     event.key === '/' &&
-    !selectElement('#source-dialog').open &&
-    !selectElement('#job-prompts-dialog').open &&
-    !selectElement('#project-dialog').open &&
-    !selectElement('#settings-dialog').open &&
-    !selectElement('#project-info-dialog').open &&
-    !selectElement('#rename-project-dialog').open &&
-    !selectElement('#action-dialog').open &&
-    !selectElement('#modify-analysis-dialog').open &&
-    !selectElement('#node-dialog').open &&
-    !selectElement('#noun-details-dialog').open &&
-    !selectElement('#sequence-details-dialog').open &&
-    !selectElement('#analysis-changes-dialog').open &&
+    !document.querySelector('dialog[open]') &&
     !['INPUT', 'TEXTAREA'].includes(event.target.tagName) &&
     selectElement('#directory-search')
   ) {

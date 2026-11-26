@@ -52,12 +52,13 @@ or paste a folder path.
 
 Use **Areas** to partition an application into a small set of responsibility boxes,
 including user-facing capabilities, backend services, and infrastructure. Choose
-**Map areas** for the whole project or enter an optional scope. Open a box to see
-its smaller areas, then use the breadcrumb or browser Back to move up. Each area
-includes a description and source links. Maps support up to three levels, save
+**New area map**, enter a scope or leave it blank for the whole project, then choose
+**Map areas**. Open a box to see its smaller areas, then use the breadcrumb or
+browser Back to move up. Each area includes a description and source links.
+Maps support up to three levels, save
 independently, and can be rerun, modified, duplicated, or deleted.
 
-Use the **Presentation** tab to enter a topic about the selected codebase and create
+On the **Presentation** tab, choose **New presentation** and enter a topic to create
 a source-linked slide deck. Decks include speaker notes and custom system maps,
 request journeys, or module detail diagrams when useful. Navigate with the arrow
 keys, use **Present** (or **F**) for fullscreen, and press **Escape** to exit.

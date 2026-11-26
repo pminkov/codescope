@@ -229,7 +229,7 @@ test('areas view renders immediate children, breadcrumbs, leaves, and empty stat
   const selected = { ...createAreasResult(), id: 'saved' };
   const project = { name: 'App <demo>', areaAnalyses: [selected] };
   const options = {
-    draft: '<draft>', actionsBusy: false,
+    actionsBusy: false,
     // Mirror the browser route convention, including the optional nested box ID.
     projectUrl: (tab, selection = '') => `/projects/app/${tab}/${selection}`,
   };
@@ -261,11 +261,11 @@ test('areas view renders immediate children, breadcrumbs, leaves, and empty stat
   const safe = renderAreasView(project, selected, options);
   assert.doesNotMatch(safe, /<img|<script/);
   assert.match(safe, /&lt;img/);
-  assert.match(safe, /&lt;draft&gt;/);
+  assert.match(safe, /data-new-analysis="areas"/);
   const empty = renderAreasView(project, { ...selected, areas: [] }, options);
   assert.match(empty, /No areas were identified/);
   const introduction = renderAreasView(project, undefined, { ...options, actionsBusy: true });
   assert.match(introduction, /App &lt;demo&gt;/);
   assert.match(introduction, /backend services and infrastructure/);
-  assert.match(introduction, /type="submit" disabled/);
+  assert.match(introduction, /data-new-analysis="areas"[^>]*\bdisabled/);
 });

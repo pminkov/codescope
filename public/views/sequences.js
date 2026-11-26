@@ -1,11 +1,11 @@
 import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
+import { renderSavedAnalysisListHeader } from '../ui/new-analysis.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisLabel,
-  renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 import { renderSequenceDiagram, renderSequenceZoomControls } from '../sequence-diagram.js';
 
@@ -63,31 +63,15 @@ function renderSequenceMessage(message, index, names) {
 }
 
 // Compose sequence navigation, lifelines, and evidence without installing controls.
-export function renderSequencesView(project, selected, { draft, projectUrl, actionsBusy }) {
+export function renderSequencesView(project, selected, { projectUrl, actionsBusy }) {
   const analyses = project.sequences || [];
   const busy = ['queued', 'running'].includes(project.job?.status);
   const navigation = /* HTML */ `
     <aside class="sidebar sequence-sidebar" aria-label="Sequence diagram navigation">
       <div class="sidebar-heading">
         <h2>Sequence diagrams</h2>
-        <span class="tiny-label">${analyses.length} SAVED</span>
       </div>
-      <form id="sequence-form" class="flow-composer">
-        <label for="sequence-question">Describe an interaction</label>
-        ${renderAnalysisTextarea({
-          id: 'sequence-question',
-          rows: 4,
-          placeholder: 'What happens when an analysis starts?',
-          draft,
-          busy,
-          required: true,
-        })}
-        <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
-          Generate sequence
-        </button>
-        <p class="flow-error" role="alert"></p>
-      </form>
-      ${analyses.length ? '<h3 class="sequence-saved-heading">Saved diagrams</h3>' : ''}
+      ${renderSavedAnalysisListHeader('sequences', analyses.length, actionsBusy)}
       <div class="flow-options">
         ${analyses
           .map(

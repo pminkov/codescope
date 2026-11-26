@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { escapeHtml } from '../public/content.js';
 import { renderAnalysisMenu } from '../public/ui/analysis-controls.js';
+import { renderNewAnalysisFormContent } from '../public/ui/new-analysis.js';
 import { renderSourceButton, renderSourceDisclosure } from '../public/ui/source-links.js';
 import { renderSourcePreview } from '../public/ui/source-preview.js';
 import {
@@ -10,6 +11,8 @@ import {
   renderDirectorySearchResults,
 } from '../public/views/directories.js';
 import { renderFlowsView } from '../public/views/flows.js';
+import { renderAreasView } from '../public/views/areas.js';
+import { renderPresentationsView } from '../public/views/presentations.js';
 import { renderNounsView, renderNounDetails } from '../public/views/nouns.js';
 import { renderSequencesView, renderSequenceDetails } from '../public/views/sequences.js';
 import { renderArchitectureView, renderNodeDetails } from '../public/views/architecture.js';
@@ -57,7 +60,6 @@ function createViewProject() {
 // Supply deterministic project routes and view state shared by renderer examples.
 function createViewOptions() {
   return {
-    draft: '',
     query: '',
     expanded: new Set(['']),
     detailState: new Map(),
@@ -70,25 +72,36 @@ function createViewOptions() {
   };
 }
 
-// Moving forms must not add indentation or trim drafts when generating their HTML.
-test('request forms preserve exact escaped drafts and disable fields only for active jobs', () => {
-  const draft = '\n  first line\n</textarea><img src=x onerror=alert(1)> & `value`';
-  for (const status of ['completed', 'queued', 'running']) {
-    const project = { ...createViewProject(), job: { status } };
-    const options = { ...createViewOptions(), draft };
-    for (const render of [
-      renderFlowsView,
-      renderNounsView,
-      renderSequencesView,
-      renderArchitectureView,
-    ]) {
-      const html = render(project, undefined, options);
-      const field = html.match(/<textarea\b([^>]*)>([\s\S]*?)<\/textarea>/);
-      assert.ok(field);
-      assert.equal(field[2], escapeHtml(draft));
-      assert.equal(/\bdisabled\b/.test(field[1]), status !== 'completed');
-      assert.doesNotMatch(html, /<img/);
+// Each repeatable analysis opens one dialog with its own request field and scope rules.
+test('analysis views share a creation dialog and gate its trigger while busy', () => {
+  const project = createViewProject();
+  for (const [kind, renderView, field] of [
+    ['architecture', renderArchitectureView, 'question'],
+    ['areas', renderAreasView, 'scope'],
+    ['flows', renderFlowsView, 'feature'],
+    ['nouns', renderNounsView, 'scope'],
+    ['sequences', renderSequencesView, 'question'],
+    ['presentations', renderPresentationsView, 'topic'],
+  ]) {
+    for (const actionsBusy of [false, true]) {
+      const html = renderView(project, undefined, { ...createViewOptions(), actionsBusy });
+      assert.doesNotMatch(html, /<textarea|<form/);
+      const triggers = html.match(/<button\b[^>]*data-new-analysis=[^>]*>/g) || [];
+      assert.equal(triggers.length, 1);
+      const [trigger] = triggers;
+      assert.ok(trigger.includes(`data-new-analysis="${kind}"`));
+      assert.match(trigger, /aria-controls="new-analysis-dialog"/);
+      assert.equal(/\bdisabled\b/.test(trigger), actionsBusy);
     }
+
+    const form = renderNewAnalysisFormContent(kind, project.name);
+    assert.ok(form.includes(escapeHtml(project.name)));
+    assert.match(form, /id="new-analysis-title">New /);
+    const input = form.match(/<textarea\b[^>]*>/)[0];
+    assert.ok(input.includes(`name="${field}"`));
+    assert.match(input, /maxlength="4000"/);
+    assert.equal(/\brequired\b/.test(input), field !== 'scope');
+    assert.equal(form.includes('Leave blank to analyze the whole project.'), field === 'scope');
   }
 });
 
@@ -165,6 +178,11 @@ test('flow templates keep numbered phases, collapsed steps, and encoded related 
   const options = createViewOptions();
   options.detailState.set('flow:first', false);
   const html = renderFlowsView(project, flow, options);
+  const newButton = html.indexOf('data-new-analysis="flows"');
+  const savedCount = html.indexOf('1 SAVED');
+  const firstEntry = html.indexOf('class="flow-option active"');
+  assert.ok(newButton >= 0 && newButton < savedCount && savedCount < firstEntry);
+
   assert.match(html, /class="step-number">01<\/span>/);
   assert.match(html, /class="step-number">02<\/span>/);
   assert.doesNotMatch(html.match(/<details[^>]*data-detail="flow:first"[^>]*>/)[0], /\bopen\b/);

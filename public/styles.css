@@ -702,14 +702,20 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 #ask-send:not(:hover) { background: var(--accent-bg); }
 #ask-send:hover { background: var(--hover); }
 #project-dialog, #rename-project-dialog { width: min(620px, calc(100vw - 30px)); height: auto; max-height: calc(100dvh - 50px); overflow-y: auto; }
-#action-dialog { width: min(600px, calc(100vw - 30px)); height: fit-content; max-height: calc(100dvh - 50px); overflow-y: auto; }
+#action-dialog, #new-analysis-dialog {
+  width: min(600px, calc(100vw - 30px));
+  height: fit-content;
+  max-height: calc(100dvh - 50px);
+  overflow-y: auto;
+}
 #action-title { font: 1.5rem/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: -.4px; }
 .action-dialog-body { padding: 0 25px 10px; }
 .action-dialog-body p { font-size: 1rem; line-height: 1.7; margin: 12px 0; color: var(--muted); }
 .action-dialog-body p:first-child { color: var(--text); }
 .action-dialog-buttons { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 18px 25px 24px; border-top: 1px solid var(--border); }
 #action-project { overflow-wrap: anywhere; }
-#project-form, #rename-project-form { margin: 0; }
+#project-form, #rename-project-form, #new-analysis-form { margin: 0; }
+#new-analysis-form .source-heading { padding: 20px 25px 0; overflow-wrap: anywhere; }
 .project-form-body { padding: 0 25px 26px; }
 .project-form-body > p { color: var(--muted); font-size: 1rem; line-height: 1.7; }
 .project-form-body label { display: block; margin: 21px 0 8px; font-size: 1rem; font-weight: 500; }
@@ -719,7 +725,8 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .directory-picker-field input { flex: 1; min-width: 0; width: auto; }
 .directory-picker-field .button { flex-shrink: 0; }
 .project-form-body .form-note { font-size: 0.875rem; color: var(--faint); }
-#project-form-error, #rename-project-error { color: var(--amber); }
+#project-form-error, #rename-project-error, #new-analysis-error { color: var(--amber); }
+#new-analysis-error:empty { margin: 0; }
 .job-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-top: 22px; padding: var(--analysis-content-padding); padding-top: 20px; border: 1px solid var(--border); background: var(--panel); border-radius: 7px; font-family: inherit; font-size: 16px; font-weight: 400; line-height: 1.6; letter-spacing: normal; }
 /* Keep the snapshot footer closer to the bottom edge. */
 .job-card:has(.job-coverage) { padding-bottom: 20px; }
@@ -766,12 +773,14 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .empty-analysis { padding: 36px; margin-top: 26px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
 .empty-analysis h2 { font-size: 1.625rem; font-weight: 500; margin: 9px 0 15px; }
 .empty-analysis > p { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 700px; }
-.flow-composer { margin: 0 0 24px; }
-.empty-analysis .flow-composer { max-width: 680px; margin: 24px 0 0; }
-.flow-composer label { display: block; color: var(--text); font-size: 1rem; margin-bottom: 9px; }
-.flow-composer textarea { width: 100%; padding: 10px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 5px; resize: vertical; font: inherit; line-height: 1.6; font-family: inherit; font-size: 1rem; }
-.flow-composer .button { margin-top: 8px; }
-/* Use the same full-width action button across analysis views. */
+.saved-analysis-list-header { display: grid; gap: 16px; margin-bottom: 8px; }
+.sidebar-heading + .saved-analysis-list-header { margin-top: 16px; }
+.saved-analysis-list-header [data-new-analysis] {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+.saved-analysis-list-header .tiny-label { margin: 0; }
 .button.analysis-generate {
   margin-top: 14px;
   width: 100%;
@@ -781,8 +790,18 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
   color: var(--action-text);
 }
 .button.analysis-generate:hover:enabled { background: var(--action-hover); }
-.flow-error { color: var(--amber); font-size: 0.875rem; }
-#modification-prompt { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--input); color: var(--text); font: inherit; line-height: 1.6; resize: vertical; }
+.project-form-body textarea {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--input);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
 .flow-sidebar .sidebar-description { margin-bottom: 20px; }
 .stale-source { border-color: var(--amber); }
 .graph-canvas { position: relative; isolation: isolate; padding: 32px 52px; background-color: var(--input); background-image: radial-gradient(var(--border) .7px, transparent .7px); background-size: 18px 18px; }
@@ -847,7 +866,6 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 /* Each architecture question has its own saved diagram and navigation entry. */
 .architecture-workspace > .architecture-content { margin: 0; border: 0; border-radius: 0; min-width: 0; }
 .architecture-sidebar .flow-option p { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.composer-hint { font-size: .875rem; line-height: 1.6; color: var(--faint); margin: 9px 0; }
 .architecture-question { margin-top: 23px; padding: 15px 18px; border: 1px solid var(--border); border-radius: 6px; background: var(--input); }
 .architecture-question p { margin: 7px 0 0; line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; }
 
@@ -1002,17 +1020,7 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 
 /* Sequence lifelines keep their reading size inside a keyboard-scrollable canvas. */
 .sequence-content h2 { margin: 9px 0 14px; font-size: 1.75rem; font-weight: 550; overflow-wrap: anywhere; }
-/* Align the request form with its heading and give each control room to breathe. */
 .sequence-sidebar .sidebar-heading { padding: 0; }
-.sequence-sidebar .flow-composer { margin-top: 24px; }
-.sequence-sidebar .flow-composer label { color: var(--muted); }
-.sequence-sidebar .flow-composer textarea { display: block; }
-.sequence-saved-heading {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: .8125rem;
-  font-weight: 400;
-}
 .sequence-sidebar .flow-options { flex-direction: column; }
 .sequence-sidebar .flow-option p {
   overflow-wrap: anywhere;
@@ -1128,10 +1136,13 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 #project-info-dialog .source-heading, #settings-dialog .source-heading { flex-shrink: 0; }
 #project-info-dialog .source-heading { align-items: flex-start; }
 #project-info-dialog .source-heading > div { min-width: 0; }
-#project-info-title, #settings-title {
+#project-info-title, #settings-title, #new-analysis-title {
   font: 550 1.4rem/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
-#close-project-info, .settings-close { flex-shrink: 0; font-size: 1.4375rem; }
+#close-project-info, .settings-close, .icon-button[data-close-new-analysis] {
+  flex-shrink: 0;
+  font-size: 1.4375rem;
+}
 .project-info-fields { display: grid; gap: 24px; margin: 5px 0 0; }
 .project-info-fields dt { color: var(--muted); font-size: .875rem; font-weight: 500; }
 .project-info-fields dd { margin: 8px 0 0; }
@@ -1195,7 +1206,7 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 /* A static snapshot has no local workspace or analysis worker. */
 html[data-demo] :is(
   #app-settings, #add-project, #rename-project, #delete-project, .project-actions .actions-divider,
-  .project-info-fields > div:has(#project-path), .node-dialog-footer, .flow-composer,
+  .project-info-fields > div:has(#project-path), .node-dialog-footer, [data-new-analysis],
   .analysis-actions, [data-action="endpoints"], [data-scan-refresh], .presentation-toolbar [download]
 ) {
   display: none;

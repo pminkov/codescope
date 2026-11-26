@@ -1,11 +1,11 @@
 import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceDisclosure } from '../ui/source-links.js';
+import { renderSavedAnalysisListHeader } from '../ui/new-analysis.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisLabel,
-  renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
 // Recover the selected box's ancestry for a bounded, source-independent breadcrumb.
@@ -47,31 +47,17 @@ function renderAreaCard(area, childCounts, selectedId, projectUrl) {
   `;
 }
 
-// Keep previously generated partitions available beside the optional scope composer.
-function renderAreasNavigation(project, selected, { draft, actionsBusy, projectUrl }) {
+// Show saved maps beside the action for creating a new area map.
+function renderAreasNavigation(project, selected, { actionsBusy, projectUrl }) {
   const analyses = project.areaAnalyses || [];
 
   return /* HTML */ `
     <aside class="sidebar areas-sidebar" aria-label="Areas analysis navigation">
       <div class="sidebar-heading">
         <h2>Areas</h2>
-        <span class="tiny-label">${analyses.length} SAVED</span>
       </div>
       <p class="sidebar-description">Explore the pieces that make up your application.</p>
-      <form id="areas-form" class="flow-composer">
-        <label for="areas-scope">Scope (optional)</label>
-        ${renderAnalysisTextarea({
-          id: 'areas-scope', rows: 4, draft, busy: actionsBusy, required: false,
-          placeholder: 'The whole application, or focus on a subsystem…',
-        })}
-        <p class="composer-hint">
-          Leave blank for the whole project. Each run saves a separate map.
-        </p>
-        <button class="button analysis-generate" type="submit" ${actionsBusy ? 'disabled' : ''}>
-          Map areas
-        </button>
-        <p class="flow-error" role="alert"></p>
-      </form>
+      ${renderSavedAnalysisListHeader('areas', analyses.length, actionsBusy)}
       <div class="flow-options">
         ${analyses.map(
           // Saved maps always open at their top level.

@@ -189,15 +189,3 @@ export function formatAnalysisDate(timestamp) {
       })
     : '';
 }
-
-// Keep textarea values adjacent to their tags so formatting adds no draft whitespace.
-export function renderAnalysisTextarea({ id, rows, placeholder, draft, busy, required }) {
-  return `<textarea
-    id="${escape(id)}"
-    ${required ? 'required' : ''}
-    maxlength="4000"
-    rows="${rows}"
-    placeholder="${escape(placeholder)}"
-    ${busy ? 'disabled' : ''}
-  >${escape(draft)}</textarea>`;
-}

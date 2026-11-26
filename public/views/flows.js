@@ -1,11 +1,11 @@
 import { escapeHtml as escape, formatText } from '../content.js';
 import { renderIcon } from '../ui/icons.js';
 import { renderSourceButton, renderSourceDisclosure } from '../ui/source-links.js';
+import { renderNewAnalysisButton, renderSavedAnalysisListHeader } from '../ui/new-analysis.js';
 import {
   renderAnalysisControls,
   renderAnalysisFreshness,
   renderAnalysisLabel,
-  renderAnalysisTextarea,
 } from '../ui/analysis-controls.js';
 
 // Render a saved flow's navigation entry and selection state.
@@ -132,34 +132,8 @@ function renderFlowStep(flow, step, number, detailState, projectUrl) {
   `;
 }
 
-// Render the flow question form with its draft or next suggestion and busy state.
-function renderFlowComposer(draft, busy) {
-  return /* HTML */ `
-    <form id="flow-form" class="flow-composer">
-      <label for="flow-feature">Add a code flow</label>
-      ${renderAnalysisTextarea({
-        id: 'flow-feature',
-        rows: 3,
-        placeholder: 'What happens when a user signs in?',
-        draft,
-        busy,
-        required: true,
-      })}
-      <button class="button analysis-generate" type="submit" ${busy ? 'disabled' : ''}>
-        Trace flow
-      </button>
-      <p class="flow-error" role="alert"></p>
-    </form>
-  `;
-}
-
 // Compose the selected walkthrough without changing expansion state.
-export function renderFlowsView(
-  project,
-  selected,
-  { draft, detailState, projectUrl, actionsBusy },
-) {
-  const busy = ['queued', 'running'].includes(project.job?.status);
+export function renderFlowsView(project, selected, { detailState, projectUrl, actionsBusy }) {
   if (!project.flows.length) {
     return /* HTML */ `
       <article class="empty-analysis">
@@ -169,7 +143,7 @@ export function renderFlowsView(
           Describe a user action, request, or process to trace. CodeScope will inspect this project
           and create a source-linked walkthrough.
         </p>
-        ${renderFlowComposer(draft, busy)}
+        ${renderNewAnalysisButton('flows', actionsBusy)}
       </article>
     `;
   }
@@ -199,10 +173,9 @@ export function renderFlowsView(
       <aside class="sidebar flow-sidebar" aria-label="Code flow navigation">
         <div class="sidebar-heading">
           <h2>Code flows</h2>
-          <span class="tiny-label">${project.flows.length} SAVED</span>
         </div>
         <p class="sidebar-description">From a user action to the code that makes it happen.</p>
-        ${renderFlowComposer(draft, busy)}
+        ${renderSavedAnalysisListHeader('flows', project.flows.length, actionsBusy)}
         <div class="flow-options">
           ${project.flows
             .map(
