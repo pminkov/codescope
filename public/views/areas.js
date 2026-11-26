@@ -68,10 +68,7 @@ function renderAreasNavigation(project, selected, { actionsBusy, projectUrl }) {
               ${analysis.id === selected?.id ? 'aria-current="page"' : ''}
             >
               <span class="flow-option-number">${String(index + 1).padStart(2, '0')}</span>
-              <div>
-                <strong>${escape(analysis.title)}</strong>
-                <p>${escape(analysis.requestedScope || 'Entire project')}</p>
-              </div>
+              <strong>${escape(analysis.title)}</strong>
             </a>
           `,
         ).join('')}
@@ -130,6 +127,12 @@ function renderAreasContent(project, selected, { areaId, actionsBusy, projectUrl
         <h2>${escape(selected.title)}</h2>
         <p class="lead">${formatText(selected.description)}</p>
         ${renderSourceDisclosure(selected.sources)}
+        ${selected.requestedScope?.trim() ? /* HTML */ `
+          <details class="analysis-disclosure prompt-disclosure">
+            <summary>${renderIcon('chevron')}Prompt</summary>
+            <p>${escape(selected.requestedScope)}</p>
+          </details>
+        ` : ''}
       </div>
       ${renderAnalysisControls('areas', selected.id, {
         busy: actionsBusy, review: selected.review,

@@ -847,14 +847,22 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 
 /* Readable explanations, with evidence available on demand. */
 .inline-code { display: inline; padding: 1px 4px; border-radius: 3px; background: var(--panel-raised); color: var(--code); font: .92em/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-.source-disclosure { margin: 15px 0; max-width: 100%; font-size: 0.875rem; }
-.source-disclosure > summary { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); cursor: pointer; list-style: none; padding: 3px 0; }
-.source-disclosure > summary::-webkit-details-marker { display: none; }
-.source-disclosure > summary .icon { width: 12px; height: 12px; color: var(--faint); }
-.source-disclosure[open] > summary .icon { transform: rotate(90deg); }
+.analysis-disclosure { margin: 15px 0; max-width: 100%; font-size: 0.875rem; }
+.analysis-disclosure > summary { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); cursor: pointer; list-style: none; padding: 3px 0; }
+.analysis-disclosure > summary::-webkit-details-marker { display: none; }
+.analysis-disclosure > summary .icon { width: 12px; height: 12px; color: var(--faint); }
+.analysis-disclosure[open] > summary .icon { transform: rotate(90deg); }
+.analysis-disclosure > summary:hover { color: var(--accent); }
+.analysis-disclosure > :is(ul, p) {
+  margin: 10px 0 0;
+  padding: 13px 15px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.prompt-disclosure > p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .source-disclosure > summary > span { color: var(--faint); margin-left: 3px; }
-.source-disclosure > summary:hover { color: var(--accent); }
-.source-disclosure > ul { list-style: none; display: grid; gap: 10px; margin: 10px 0 0; padding: 13px 15px; background: var(--input); border: 1px solid var(--border); border-radius: 5px; }
+.source-disclosure > ul { list-style: none; display: grid; gap: 10px; }
 .source-disclosure li { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 15px; min-width: 0; }
 .source-file-name { font: 0.8125rem/1.6 ui-monospace, SFMono-Regular, monospace; color: var(--muted); overflow-wrap: anywhere; }
 .source-line-links { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -922,7 +930,6 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
   overflow-wrap: anywhere;
 }
 .areas-sidebar .flow-option { overflow-wrap: anywhere; }
-.areas-sidebar .flow-option > div { flex: 1; min-width: 0; }
 .area-breadcrumb {
   display: flex;
   flex-wrap: wrap;

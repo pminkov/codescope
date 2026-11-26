@@ -269,3 +269,36 @@ test('areas view renders immediate children, breadcrumbs, leaves, and empty stat
   assert.match(introduction, /backend services and infrastructure/);
   assert.match(introduction, /data-new-analysis="areas"[^>]*\bdisabled/);
 });
+
+// Keep each map's original wording in its own disclosure, including on nested area pages.
+test('area maps list titles and disclose only the selected prompt', () => {
+  const jobs = {
+    ...createAreasResult(), id: 'jobs-map', title: 'Jobs map',
+    requestedScope: 'Trace **jobs**\n  <queue> & workers.',
+  };
+  const storage = { ...jobs, id: 'storage-map', title: 'Storage map', requestedScope: 'Find WAL.' };
+  const project = { name: 'App', areaAnalyses: [jobs, storage] };
+  const options = {
+    areaId: 'backend', actionsBusy: false,
+    // Keep both saved maps and their nested levels addressable.
+    projectUrl: (tab, selection) => `/projects/app/${tab}/${selection}`,
+  };
+
+  const [sidebar, content] = renderAreasView(project, jobs, options).split('</aside>');
+  assert.match(sidebar, /Jobs map/);
+  assert.match(sidebar, /Storage map/);
+  assert.doesNotMatch(sidebar, /Trace \*\*jobs\*\*|Find WAL/);
+  assert.doesNotMatch(content, /Find WAL/);
+  const prompt = content.match(/<details\b([^>]*prompt-disclosure[^>]*)>([\s\S]*?)<\/details>/);
+  assert.ok(prompt);
+  assert.doesNotMatch(prompt[1], /\bopen\b/);
+  assert.match(prompt[2], /Prompt<\/summary>/);
+  assert.ok(prompt[2].includes('<p>Trace **jobs**\n  &lt;queue&gt; &amp; workers.</p>'));
+
+  for (const requestedScope of [undefined, null, ' \n ']) {
+    const wholeProject = { ...jobs, requestedScope };
+    const unscoped = { ...project, areaAnalyses: [wholeProject] };
+    const html = renderAreasView(unscoped, wholeProject, options);
+    assert.doesNotMatch(html, /prompt-disclosure|Entire project/);
+  }
+});

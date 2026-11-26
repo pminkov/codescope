@@ -60,7 +60,7 @@ export function renderSourceDisclosure(sources = [], exclude = []) {
   if (!groups.size) return '';
 
   return /* HTML */ `
-    <details class="source-disclosure">
+    <details class="analysis-disclosure source-disclosure">
       <summary>
         ${renderIcon('chevron')}Sources
         <span>${groups.size} ${groups.size === 1 ? 'file' : 'files'}</span>
