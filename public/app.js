@@ -1323,7 +1323,7 @@ function confirmAnalysisDeletion(title) {
     'Your other analyses and source files stay in place.';
   selectElement('#action-result').textContent = 'You can run a new analysis later.';
   selectElement('#confirm-action').textContent = 'Delete analysis';
-  selectElement('#confirm-action').className = 'button danger';
+  selectElement('#confirm-action').className = 'button danger delete-analysis-confirm';
   dialog.returnValue = '';
 
   return new Promise(

@@ -108,6 +108,11 @@ main { padding-bottom: 32px; }
 .button:hover { background: var(--hover); }
 .button.danger { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger); }
 .button.danger:hover { filter: brightness(.96); }
+.button.delete-analysis-confirm {
+  background: color-mix(in srgb, var(--danger-bg) 65%, var(--panel));
+  border-color: color-mix(in srgb, var(--danger-line) 55%, var(--border));
+  color: color-mix(in srgb, var(--danger) 65%, var(--muted));
+}
 .button > span { font-size: 1.1875rem; line-height: 1; }
 #stack { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .stack-label { display: inline-block; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); background: var(--panel); font-size: 0.875rem; line-height: 1.5; }
