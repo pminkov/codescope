@@ -107,8 +107,7 @@ async function writeDemoFiles(directory, snapshot) {
   const template = await readFile(new URL('index.html', publicDirectory), 'utf8');
   const html = template.replace('<html lang="en" data-theme="dark">', demoMarker)
     .replace('Loading local projects…', 'Loading demo…')
-    .replaceAll('href="/styles.css"', 'href="./styles.css"')
-    .replaceAll('href="/presentation.css"', 'href="./presentation.css"')
+    .replace(/href="\/([\w-]+\.css)"/g, 'href="./$1"')
     .replaceAll('src="/app.js"', 'src="./app.js"')
     .replace(/href="\/([a-z-]+)"/g, 'href="#/$1"');
   await writeFile(join(directory, 'index.html'), html);

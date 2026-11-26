@@ -1,77 +1,11 @@
 :root {
-  color-scheme: dark;
   --analysis-content-padding: 33px 28px 36px;
   --page-gutter: clamp(28px, 5vw, 72px);
   --project-layout-gap: 14px;
-  --bg: #1c1f23;
-  --panel: #22262b;
-  --panel-raised: #212830;
-  --hover: #212830;
-  --input: #151b23;
-  --text: #f0f6fc;
-  --muted: #b1bac4;
-  --tab-label: #c9d1d9;
-  --faint: #9198a1;
-  --border: #3d444d;
-  --soft-border: #2a313c;
-  --accent: #58a6ff;
-  --accent-bg: #17263b;
-  --accent-line: #375571;
-  --brand-bar-line: #3d444d;
-  --brand-bar-bg: #151b23;
-  --brand-echo: #52677f;
-  --selected-tab-bg: #303a46;
-  --selected-tab-border: #687789;
-  --action-fill: #273545;
-  --action-hover: #324358;
-  --action-line: #42566b;
-  --action-text: #b1c6df;
-  --amber: #e3b341;
-  --amber-bg: #2b2416;
-  --amber-line: #594619;
-  --code: #c6c8ca;
-  --shadow: #01040955;
-  --danger: #ff7b72;
-  --danger-bg: #301b21;
-  --danger-line: #71363b;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-synthesis: none;
   /* Use the System 15px sample scale; component type sizes are relative to it. */
   font-size: 15px;
-}
-[data-theme='light'] {
-  color-scheme: light;
-  --bg: #e2e6e9;
-  --panel: #eceef0;
-  --panel-raised: #dce2e7;
-  --hover: #d7dfe6;
-  --input: #e5e9ec;
-  --text: #1f2328;
-  --muted: #505a65;
-  --tab-label: #4f5964;
-  --faint: #59636e;
-  --border: #c2cbd3;
-  --soft-border: #d3dbe1;
-  --accent: #085ebf;
-  --accent-bg: #eaf3ff;
-  --accent-line: #a7c7ef;
-  --brand-bar-line: var(--border);
-  --brand-bar-bg: #f1f3f5;
-  --brand-echo: #afc0d3;
-  --selected-tab-bg: #d3dbe3;
-  --selected-tab-border: #8491a1;
-  --action-fill: #dde7f1;
-  --action-hover: #d0deec;
-  --action-line: #a9bbce;
-  --action-text: #355474;
-  --amber: #7d4e00;
-  --amber-bg: #fff8d9;
-  --amber-line: #dec785;
-  --code: #474b50;
-  --shadow: #1f23281f;
-  --danger: #b62324;
-  --danger-bg: #ffebe9;
-  --danger-line: #ffb1aa;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font-size: 1rem; line-height: 1.55; }

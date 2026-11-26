@@ -226,11 +226,17 @@ test('presentation HTTP APIs generate decks and export original JSON and standal
     const html = await fetch(`${download}?format=html`);
     assert.match(html.headers.get('content-type'), /text\/html/);
     const document = await html.text();
+    const palette = await fetch(`${base}/theme.css`);
+    assert.equal(palette.status, 200);
+    assert.ok(document.includes(await palette.text()));
+    assert.match(document, /<html lang="en" data-theme="dark">/);
     assert.match(document, /<style>[\s\S]*deck-slide/);
     assert.equal((document.match(/class="deck-slide deck-layout-/g) || []).length, 5);
     assert.match(document, /href="#slide-2"/);
     assert.match(document, /<svg/);
     assert.doesNotMatch(document, /<script|<link|<iframe|data-source=/);
+    const light = await fetch(`${download}?format=html&theme=light`);
+    assert.match(await light.text(), /<html lang="en" data-theme="light">/);
     assert.equal((await fetch(`${download}?format=pptx`)).status, 400);
     assert.equal((await fetch(`${base}${route}/missing/export?format=json`)).status, 404);
     assert.equal((await post(`${route}/${deck.id}/export?format=json`, {})).status, 405);

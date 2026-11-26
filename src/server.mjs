@@ -215,11 +215,15 @@ export function createApp({
           const filename = `presentation-${presentationExport[2]}.${format}`;
           response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
           if (format === 'json') return send(200, JSON.stringify(deck, null, 2));
-          const css = await readFile(
-            new URL('../public/presentation.css', import.meta.url), 'utf8',
+          const [palette, slides] = await Promise.all([
+            readFile(new URL('../public/theme.css', import.meta.url), 'utf8'),
+            readFile(new URL('../public/presentation.css', import.meta.url), 'utf8'),
+          ]);
+          const html = renderPresentationDocument(
+            deck, projectName, `${palette}\n${slides}`, url.searchParams.get('theme'),
           );
 
-          return send(200, renderPresentationDocument(deck, projectName, css), 'text/html');
+          return send(200, html, 'text/html');
         }
 
         // Delete individual nodes in a diagram.

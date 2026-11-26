@@ -131,7 +131,12 @@ export function renderPresentationsView(project, selected, {
           <button type="button" class="button" data-presentation-action="present">
             Present
           </button>
-          <a class="button" href="${exportUrl}?format=html" download>Download HTML</a>
+          <a
+            id="presentation-html-download"
+            class="button"
+            href="${exportUrl}?format=html"
+            download
+          >Download HTML</a>
           <a class="button" href="${exportUrl}?format=json" download>Download JSON</a>
           <span>← → to navigate · F to present</span>
         </div>
@@ -171,9 +176,9 @@ export function renderPresentationsView(project, selected, {
 }
 
 // Export a self-contained deck with SVG diagrams, anchor navigation, and printable slides.
-export function renderPresentationDocument(deck, projectName, css) {
+export function renderPresentationDocument(deck, projectName, css, theme = 'dark') {
   return /* HTML */ `<!doctype html>
-<html lang="en">
+<html lang="en" data-theme="${theme === 'light' ? 'light' : 'dark'}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

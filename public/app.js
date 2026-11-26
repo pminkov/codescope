@@ -221,6 +221,7 @@ async function navigate(url, replace = false) {
 // Apply the chosen theme and remember the browser preference.
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  syncPresentationDownloadTheme();
   selectElement('#theme-toggle').innerHTML = renderIcon(theme === 'dark' ? 'sun' : 'moon');
   selectElement('#theme-toggle').setAttribute(
     'aria-label',
@@ -332,6 +333,16 @@ function selectedPresentationIndex(deck) {
   return Math.min(presentationSlides.get(`${data.id}:${deck.id}`) || 0, deck.slides.length - 1);
 }
 
+// Keep the portable deck in the theme currently shown in the workspace.
+function syncPresentationDownloadTheme() {
+  const link = selectElement('#presentation-html-download');
+  if (!link) return;
+
+  const url = new URL(link.href);
+  url.searchParams.set('theme', document.documentElement.dataset.theme);
+  link.search = url.search;
+}
+
 // Render the selected presentation at its current slide.
 function renderPresentations() {
   const deck = getSelectedPresentation();
@@ -340,6 +351,7 @@ function renderPresentations() {
     actionsBusy: isAnalysisBusy(),
     slideIndex: deck ? selectedPresentationIndex(deck) : 0,
   });
+  syncPresentationDownloadTheme();
 }
 
 // Change only the slide and its supporting UI so fullscreen survives navigation.

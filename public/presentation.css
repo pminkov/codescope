@@ -21,22 +21,24 @@
 .presentation-stage { border: 1px solid var(--accent-line); overflow: hidden; }
 .presentation-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .deck-slide { position: relative; display: flex; flex-direction: column; aspect-ratio: 16 / 10; }
-.deck-slide { padding: 3cqw 4cqw 2cqw; color: #eaf1ed; background: #102421; }
+.deck-slide { padding: 3cqw 4cqw 2cqw; color: var(--text); background: var(--panel); }
 .deck-slide { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .deck-slide { box-sizing: border-box; overflow-wrap: anywhere; }
 .deck-slide * { box-sizing: border-box; }
 .deck-slide-header, .deck-slide-footer { display: flex; justify-content: space-between; gap: 16px; }
-.deck-slide-header, .deck-slide-footer { font-size: 1.15cqw; letter-spacing: .08em; color: #9db8ae; }
-.deck-slide-header { border-bottom: 1px solid #34524a; padding-bottom: 1.5cqw; }
-.deck-brand { color: #b9e3ba; font-weight: 700; }
-.deck-brand span { color: #9db8ae; font-weight: 400; letter-spacing: 0; }
+.deck-slide-header, .deck-slide-footer { font-size: 1.15cqw; letter-spacing: .08em; color: var(--muted); }
+.deck-slide-header { border-bottom: 1px solid var(--border); padding-bottom: 1.5cqw; }
+.deck-brand { color: var(--accent); font-weight: 700; }
+.deck-brand span { color: var(--muted); font-weight: 400; letter-spacing: 0; }
 .deck-slide-body { flex: 1; padding: 2.2cqw 0; min-height: 0; }
-.deck-slide h2 { color: #f1f4e9; font-size: 3.6cqw; line-height: 1.18; margin: 0 0 1.4cqw; }
-.deck-slide .deck-subtitle { color: #b8ccc3; font-size: 1.75cqw; line-height: 1.45; margin: 0; }
+.deck-slide h2 { color: var(--text); font-size: 3.6cqw; line-height: 1.18; margin: 0 0 1.4cqw; }
+.deck-slide .deck-subtitle { color: var(--muted); font-size: 1.75cqw; line-height: 1.45; margin: 0; }
 .deck-bullets { padding-left: 2.5cqw; margin: 3cqw 0 0; font-size: 2.2cqw; line-height: 1.5; }
 .deck-bullets li { padding-left: .6cqw; margin: 1.6cqw 0; }
-.deck-bullets li::marker { color: #c6e78a; }
-.deck-slide .inline-code { color: #d0e7b9; font-size: .9em; background: #223f35; }
+.deck-bullets li::marker { color: var(--accent); }
+.deck-slide .inline-code, .deck-export-notes .inline-code {
+  color: var(--code); font-size: .9em; background: var(--panel-raised);
+}
 .deck-layout-title .deck-slide-body { display: flex; flex-direction: column; justify-content: center; }
 .deck-layout-title h2 { font-size: 5.4cqw; max-width: 90%; }
 .deck-layout-title .deck-subtitle { font-size: 2.2cqw; max-width: 85%; }
@@ -46,20 +48,20 @@
 .deck-layout-diagram .deck-bullets { margin: .5cqw 0 0; font-size: 1.3cqw; }
 .deck-layout-diagram .deck-bullets li { margin: .3cqw 0; }
 .deck-diagram { margin: 1.2cqw 0 0; }
-.deck-diagram figcaption { color: #c6e78a; font-size: 1.25cqw; }
+.deck-diagram figcaption { color: var(--accent); font-size: 1.25cqw; }
 .deck-diagram svg { display: block; width: 100%; height: 34cqw; }
-.deck-module-boundary { fill: #162d28; stroke: #6e9284; stroke-dasharray: 8 5; }
-.deck-diagram-node rect { fill: #213d33; stroke: #739e80; stroke-width: 1.5; }
+.deck-module-boundary { fill: var(--input); stroke: var(--faint); stroke-dasharray: 8 5; }
+.deck-diagram-node rect { fill: var(--accent-bg); stroke: var(--faint); stroke-width: 1.5; }
 .deck-diagram-node text { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-.deck-node-title { fill: #f1f4e9; font-size: 16px; font-weight: 650; }
-.deck-node-description { fill: #c1d4c7; font-size: 13px; }
-.deck-node-group { fill: #c6e78a; font-size: 11px; letter-spacing: .07em; }
-.deck-diagram-edge path { stroke: #b9d7ab; stroke-width: 2; fill: none; }
+.deck-node-title { fill: var(--text); font-size: 16px; font-weight: 650; }
+.deck-node-description { fill: var(--muted); font-size: 13px; }
+.deck-node-group { fill: var(--accent); font-size: 11px; letter-spacing: .07em; }
+.deck-diagram-edge path { stroke: var(--accent); stroke-width: 2; fill: none; }
 .deck-diagram-edge.is-inferred path { stroke-dasharray: 6 4; }
-.deck-edge-label { fill: #dce7d5; font-size: 11px; text-anchor: middle; }
-.deck-edge-label { paint-order: stroke; stroke: #102421; stroke-width: 5px; stroke-linejoin: round; }
-.deck-arrow-head { fill: #b9d7ab; }
-.deck-diagram-legend { margin: 0; font-size: 1.1cqw; color: #b8ccc3; }
+.deck-edge-label { fill: var(--text); font-size: 11px; text-anchor: middle; }
+.deck-edge-label { paint-order: stroke; stroke: var(--panel); stroke-width: 5px; stroke-linejoin: round; }
+.deck-arrow-head { fill: var(--accent); }
+.deck-diagram-legend { margin: 0; font-size: 1.1cqw; color: var(--muted); }
 .deck-slide-footer { text-transform: uppercase; padding-top: 1cqw; }
 .presentation-controls { display: flex; align-items: center; justify-content: center; gap: 18px; }
 .presentation-controls { padding: 12px; color: var(--muted); border-top: 1px solid var(--border); }
@@ -83,13 +85,13 @@
 .presentation-stage:fullscreen .presentation-controls { position: relative; }
 
 /* Offline decks use the same HTML and SVG with no external assets or scripts. */
-.deck-export { margin: 0; color: #eaf1ed; background: #091715; font-family: sans-serif; }
+.deck-export { margin: 0; color: var(--text); background: var(--bg); font-family: sans-serif; }
 .deck-export main { max-width: 1280px; margin: auto; }
 .deck-export-page { container-type: inline-size; padding: 24px 0; scroll-margin-top: 16px; }
-.deck-export-page .deck-slide { border: 1px solid #34524a; border-radius: 12px; }
+.deck-export-page .deck-slide { border: 1px solid var(--border); border-radius: 12px; }
 .deck-export-navigation { display: flex; justify-content: space-between; padding: 16px 24px; }
-.deck-export a { color: #c6e78a; }
-.deck-export-notes { margin: 0 24px 20px; color: #b8ccc3; }
+.deck-export a { color: var(--accent); }
+.deck-export-notes { margin: 0 24px 20px; color: var(--muted); }
 .deck-export-notes summary { cursor: pointer; }
 @media (max-width: 1000px) {
   .presentation-content { padding: 20px; }
@@ -103,7 +105,7 @@
 }
 @media print {
   @page { size: 12.8in 8in; margin: 0; }
-  .deck-export { background: #102421; print-color-adjust: exact; }
+  .deck-export { background: var(--panel); print-color-adjust: exact; }
   .deck-export main { max-width: none; }
   .deck-export-page { padding: 0; break-after: page; }
   .deck-export-page:last-child { break-after: auto; }
