@@ -45,7 +45,10 @@ document.querySelectorAll('[data-icon]').forEach((element) => {
 });
 
 const isDemo = document.documentElement.hasAttribute('data-demo');
+// Request the snapshot paired with this exported copy of the app.
+const demoSnapshotUrl = `./project.json${new URL(import.meta.url).search}`;
 let demoExcerpts;
+let demoSourceFiles;
 let data;
 let expanded = new Set(['']);
 let query = '';
@@ -887,8 +890,12 @@ function blockDemoAction() {
 
 // Fetch JSON and surface API errors as readable exceptions.
 async function fetchJson(url, options) {
-  if (isDemo && url !== './project.json') throw new Error('Available in the local app.');
+  if (isDemo) {
+    const asset = url === demoSnapshotUrl || /^\.\/sources\/[a-f0-9]{64}\.json$/.test(url);
+    if (!asset || options) throw new Error('Available in the local app.');
+  }
   const response = await fetch(url, options);
+  if (isDemo && !response.ok) throw new Error('Could not load the exported file.');
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || 'Could not load the project.');
 
@@ -1829,9 +1836,10 @@ async function initializeApp() {
 
 // Load the exported display data once, including on a direct link to a saved result.
 async function initializeDemo() {
-  const snapshot = await fetchJson('./project.json');
+  const snapshot = await fetchJson(demoSnapshotUrl);
   data = snapshot.project;
-  demoExcerpts = snapshot.excerpts;
+  demoExcerpts = snapshot.excerpts || {};
+  demoSourceFiles = new Map(Object.entries(snapshot.sourceFiles || {}));
   projects = [data];
   renderProjectPicker();
   selectElement('.demo-label').hidden = false;
@@ -1864,13 +1872,15 @@ function findDemoExcerpts(path, line) {
 // Mark unpublished sources where their controls appear, including inside detail dialogs.
 function updateDemoSourceControls(container) {
   for (const control of container.querySelectorAll('[data-source]')) {
-    if (findDemoExcerpts(control.dataset.source, control.dataset.line).length) {
-      control.title = control.classList.contains('stale-source')
-        ? 'File changed since analysis. View exported excerpt.'
-        : 'View exported source excerpt';
+    const { source, line } = control.dataset;
+    const fullFile = demoSourceFiles.has(source);
+    if (fullFile || findDemoExcerpts(source, line).length) {
+      const stale = control.classList.contains('stale-source')
+        ? 'File changed since analysis. ' : '';
+      control.title = stale + (fullFile ? 'View exported source file' : 'View exported excerpt');
     } else {
       control.disabled = true;
-      control.title = 'Source excerpt omitted from this demo';
+      control.title = 'Source omitted from this demo';
     }
   }
 }
@@ -1883,7 +1893,8 @@ async function openSource(path, line, symbol = '', endLine = line, stale = false
   selectElement('#source-title').textContent = `/${path.replace(/^\/+/, '')}`;
   const finalLine = Math.max(targetLine, Number(endLine) || targetLine);
   const sourceLabel = symbol.endsWith('()') || symbol.includes(' ') ? symbol : `${symbol}()`;
-  if (isDemo) {
+  const sourceHash = demoSourceFiles?.get(path);
+  if (isDemo && !sourceHash) {
     const excerpts = findDemoExcerpts(path, line);
     if (!excerpts.length) return;
     const context = ['Exported source excerpt'];
@@ -1898,16 +1909,20 @@ async function openSource(path, line, symbol = '', endLine = line, stale = false
     selectElement(`#source-line-${targetLine}`)?.scrollIntoView({ block: 'center' });
     return;
   }
-  selectElement('#source-context').textContent = symbol
-    ? `${sourceLabel} · line ${targetLine} · Current local source`
-    : 'Current local source · Read-only preview';
+  const origin = isDemo ? 'Exported source file' : 'Current local source';
+  const context = symbol ? `${sourceLabel} · line ${targetLine} · ${origin}`
+    : `${origin} · Read-only preview`;
+  selectElement('#source-context').textContent = isDemo && stale
+    ? `${context} · File changed since analysis` : context;
   selectElement('#source-body').innerHTML = /* HTML */ `
     <div class="loading">Loading source…</div>
   `;
   if (!dialog.open) dialog.showModal();
 
   try {
-    const result = await fetchJson(`${projectApiUrl('source')}?path=${encodeURIComponent(path)}`);
+    const url = isDemo ? `./sources/${sourceHash}.json`
+      : `${projectApiUrl('source')}?path=${encodeURIComponent(path)}`;
+    const result = await fetchJson(url);
     if (requestId !== sourceRequest || !dialog.open) return;
     const lines = result.content.split('\n');
     selectElement('#source-body').innerHTML = renderSourcePreview(lines, targetLine, finalLine);

@@ -3,7 +3,7 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, r
 import { basename, dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { parseArgs } from 'node:util';
-import { indexProject, projectView, readSource } from '../src/analysis.mjs';
+import { fingerprint, indexProject, projectView, readSource } from '../src/analysis.mjs';
 import { assets } from '../src/browser-assets.mjs';
 import { schemas } from '../src/schemas.mjs';
 
@@ -15,10 +15,11 @@ const collections = {
   sequences: 'sequence', endpointAnalyses: 'endpoints', presentations: 'presentation',
 };
 const demoMarker = '<html lang="en" data-theme="dark" data-demo>';
-const usage = 'npm run export-demo -- --project <id> --out <directory> [--source <path> ...]';
+const usage = 'npm run export-demo -- --project <id> --out <directory> ' +
+  '[--full-source] [--source <path> ...]';
 
 // Load one saved project without starting workers or running registry recovery.
-async function loadExportProject(id, output) {
+async function loadExportProject(id, output, onSourceFile) {
   if (!/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error('Invalid saved project ID.');
   const registry = JSON.parse(await readFile(join(dataDirectory, 'projects.json'), 'utf8'));
   // Resolve the exact registered project before reading any analysis or source.
@@ -29,7 +30,7 @@ async function loadExportProject(id, output) {
   ));
   // Re-exporting beneath the analyzed root must not index an earlier copy of the demo.
   const index = await indexProject(project.root, project.name, undefined, {
-    excludeDirectory: output,
+    excludeDirectory: output, onSourceFile,
   });
   return projectView(project, index, understanding, null);
 }
@@ -69,8 +70,8 @@ function extractCitedLines(content, ranges) {
   return excerpts;
 }
 
-// Collect only resolved citations in files explicitly selected for this export.
-async function serializeSnapshot(view, paths) {
+// Serialize the display data, opted-in excerpts, and paths to complete source previews.
+async function serializeSnapshot(view, paths, sourceFiles) {
   const ranges = new Map();
   for (const path of paths) ranges.set(path, []);
   const project = selectDemoProject(view);
@@ -92,11 +93,13 @@ async function serializeSnapshot(view, paths) {
     const { content } = await readSource(view.root, path, view.tree);
     excerpts[path] = extractCitedLines(content, citations);
   }
-  return `{"project":${displayJson},"excerpts":${JSON.stringify(excerpts)}}\n`;
+  const excerptJson = JSON.stringify(excerpts);
+  const sourceJson = JSON.stringify(sourceFiles);
+  return `{"project":${displayJson},"excerpts":${excerptJson},"sourceFiles":${sourceJson}}\n`;
 }
 
-// Build a complete static site in staging before touching the destination.
-async function writeDemoFiles(directory, snapshot) {
+// Copy the app and rewrite its entry page for a static host.
+async function writeDemoAssets(directory, snapshotHash) {
   for (const [file] of Object.values(assets)) {
     if (file === 'index.html') continue;
     const destination = join(directory, file);
@@ -104,14 +107,35 @@ async function writeDemoFiles(directory, snapshot) {
     await copyFile(new URL(file, publicDirectory), destination);
   }
 
+  // Refresh the entry module and its snapshot together when either changes between exports.
+  const script = await readFile(join(directory, 'app.js'));
+  const version = fingerprint(snapshotHash + fingerprint(script)).slice(0, 16);
   const template = await readFile(new URL('index.html', publicDirectory), 'utf8');
   const html = template.replace('<html lang="en" data-theme="dark">', demoMarker)
     .replace('Loading local projects…', 'Loading demo…')
     .replace(/href="\/([\w-]+\.css)"/g, 'href="./$1"')
-    .replaceAll('src="/app.js"', 'src="./app.js"')
+    .replaceAll('src="/app.js"', `src="./app.js?v=${version}"`)
     .replace(/href="\/([a-z-]+)"/g, 'href="#/$1"');
   await writeFile(join(directory, 'index.html'), html);
+}
+
+// Write full files separately so a visitor downloads only the previews they open.
+async function writeDemoSnapshot(directory, id, output, paths, fullSource) {
+  const sourceFiles = Object.create(null);
+  const sourceDirectory = join(directory, 'sources');
+  if (fullSource) await mkdir(sourceDirectory);
+
+  // Opaque filenames keep arbitrary project paths out of asset URLs and host routing.
+  async function writeSourceFile({ path, content }) {
+    const hash = fingerprint(content);
+    await writeFile(join(sourceDirectory, `${hash}.json`), JSON.stringify({ content }));
+    sourceFiles[path] = hash;
+  }
+
+  const view = await loadExportProject(id, output, fullSource ? writeSourceFile : undefined);
+  const snapshot = await serializeSnapshot(view, paths, sourceFiles);
   await writeFile(join(directory, 'project.json'), snapshot);
+  return fingerprint(snapshot);
 }
 
 // Accept an empty destination or a previous export containing only known generated files.
@@ -122,7 +146,8 @@ async function checkDestination(output) {
   );
   if (!info) return false;
   if (!info.isDirectory()) throw new Error('Choose a dedicated demo output directory.');
-  if (!(await readdir(output)).length) return true;
+  const names = await readdir(output);
+  if (!names.length) return true;
   const index = await readFile(join(output, 'index.html'), 'utf8').catch(
     // Treat directories without an entry page as unrelated output.
     (error) => { if (error.code !== 'ENOENT') throw error; },
@@ -133,6 +158,15 @@ async function checkDestination(output) {
   for (const [file] of Object.values(assets)) files.add(file);
   const dirs = new Set();
   for (const file of files) dirs.add(dirname(file));
+  if (names.includes('sources')) {
+    const { sourceFiles } = JSON.parse(await readFile(join(output, 'project.json'), 'utf8'));
+    if (sourceFiles) {
+      dirs.add('sources');
+      for (const hash of Object.values(sourceFiles)) {
+        if (/^[a-f0-9]{64}$/.test(hash)) files.add(join('sources', `${hash}.json`));
+      }
+    }
+  }
 
   for (const entry of entries) {
     const path = join(entry.parentPath, entry.name).slice(output.length + 1);
@@ -143,19 +177,19 @@ async function checkDestination(output) {
 }
 
 // Swap a fully written export into place, restoring the previous copy on failure.
-async function exportDemo(id, destination, paths) {
+async function exportDemo(id, destination, paths, fullSource) {
   const requested = resolve(destination);
   await mkdir(dirname(requested), { recursive: true });
   // Match the scanner's canonical root even when the output parent is a symlink.
   const output = join(await realpath(dirname(requested)), basename(requested));
-  const snapshot = await serializeSnapshot(await loadExportProject(id, output), paths);
   const staging = await mkdtemp(join(dirname(output), `.${basename(output)}-export-`));
   const site = join(staging, 'site');
   const previous = join(staging, 'previous');
   let restoreNeeded = false;
   try {
     await mkdir(site);
-    await writeDemoFiles(site, snapshot);
+    const snapshotHash = await writeDemoSnapshot(site, id, output, paths, fullSource);
+    await writeDemoAssets(site, snapshotHash);
     if (await checkDestination(output)) {
       await rename(output, previous);
       restoreNeeded = true;
@@ -179,11 +213,12 @@ async function exportDemo(id, destination, paths) {
 try {
   const { values } = parseArgs({ options: {
     project: { type: 'string' }, out: { type: 'string' },
+    'full-source': { type: 'boolean', default: false },
     source: { type: 'string', multiple: true, default: [] }, help: { type: 'boolean' },
   } });
   if (values.help) console.log(usage);
   else if (!values.project || !values.out) throw new Error(`Usage: ${usage}`);
-  else await exportDemo(values.project, values.out, values.source);
+  else await exportDemo(values.project, values.out, values.source, values['full-source']);
 } catch (error) {
   console.error(`Export failed: ${error.message}`);
   process.exitCode = 1;

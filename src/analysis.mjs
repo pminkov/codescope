@@ -223,7 +223,7 @@ async function fingerprintFile(root, path, signal) {
 }
 
 // Build an in-memory tree and hash every eligible file, including binary files.
-export async function indexProject(root, name, signal, { excludeDirectory } = {}) {
+export async function indexProject(root, name, signal, { excludeDirectory, onSourceFile } = {}) {
   const tree = await scanDirectory(root, { name, signal, excludeDirectory });
   const files = {};
   const canonicalRoot = await realpath(root);
@@ -243,14 +243,19 @@ export async function indexProject(root, name, signal, { excludeDirectory } = {}
     }
 
     if (node.readable) {
+      let source;
       try {
-        const { content } = await readSource(root, node.path, tree);
-        node.bytes = Buffer.byteLength(content);
-        if (isCodeFile(node.path)) node.codeScan = scanCodeFile(node.path, content);
+        source = await readSource(root, node.path, tree);
+        node.bytes = Buffer.byteLength(source.content);
+        if (isCodeFile(node.path)) node.codeScan = scanCodeFile(node.path, source.content);
       } catch (error) {
         node.readable = false;
         node.description = error.message;
+        continue;
       }
+
+      // Export the same text used for the symbol locations, even if the working file changes.
+      if (onSourceFile) await onSourceFile(source);
     }
   }
 
