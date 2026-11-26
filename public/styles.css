@@ -773,7 +773,11 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .empty-analysis { padding: 36px; margin-top: 26px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
 .empty-analysis h2 { font-size: 1.625rem; font-weight: 500; margin: 9px 0 15px; }
 .empty-analysis > p { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 700px; }
-.saved-analysis-list-header { display: grid; gap: 16px; margin-bottom: 8px; }
+.sidebar:has(> .saved-analysis-list-header) > :is(.sidebar-heading, .sidebar-description) {
+  padding-inline: 0;
+  margin-inline: 0;
+}
+.saved-analysis-list-header { display: grid; gap: 24px; margin-bottom: 8px; }
 .sidebar-heading + .saved-analysis-list-header { margin-top: 16px; }
 .saved-analysis-list-header [data-new-analysis] {
   width: 100%;
@@ -1020,7 +1024,6 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 
 /* Sequence lifelines keep their reading size inside a keyboard-scrollable canvas. */
 .sequence-content h2 { margin: 9px 0 14px; font-size: 1.75rem; font-weight: 550; overflow-wrap: anywhere; }
-.sequence-sidebar .sidebar-heading { padding: 0; }
 .sequence-sidebar .flow-options { flex-direction: column; }
 .sequence-sidebar .flow-option p {
   overflow-wrap: anywhere;
