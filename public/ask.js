@@ -129,7 +129,7 @@ function renderAskTurn(message) {
 }
 
 // Mount one persistent chat with project-specific conversations and live activity.
-export function setupAsk(getContext, openSource, dialogStack) {
+export function setupAsk(getContext, openSource, dialogStack, blockDemoAction) {
   const widget = document.querySelector('#ask-widget');
   const launcher = document.querySelector('#ask-launcher');
   const panel = document.querySelector('#ask-panel');
@@ -148,6 +148,8 @@ export function setupAsk(getContext, openSource, dialogStack) {
   // Keep the launcher usable inside the browser's active modal top layer.
   function attachAskWidget() {
     const host = dialogStack.latestDialog() || document.body;
+    // Leave the draft and its focus target behind a modal notice until it is dismissed.
+    if (host.getAttribute('role') === 'alertdialog') return;
     if (widget.parentElement !== host) {
       const scrollTop = messages.clientHeight ? messages.scrollTop : savedMessageScrollTop;
       host.append(widget);
@@ -293,6 +295,7 @@ export function setupAsk(getContext, openSource, dialogStack) {
     const context = getContext();
     const question = input.value.trim();
     if (!context || !question || chat?.active) return;
+    if (blockDemoAction()) return;
     const target = chat;
     const history = conversationHistory(target.messages);
     const message = { question, context: context.label, progress: ['Preparing your question…'], startedAt: Date.now() };

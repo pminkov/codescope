@@ -21,7 +21,8 @@ path to include the currently resolved cited lines from that file.
 npm run export-demo -- --project codescope --out ./drafts/demo --source src/server.mjs
 ```
 
-Ask, editing, and generating analyses require the local app. The exporter reads
+Visitors can open analysis forms and type questions in Ask. Submitting either
+shows a read-only notice and keeps their draft available. The exporter reads
 the same `CODESCOPE_DATA_DIR` as the app and leaves the registry and jobs alone.
 Rerun the command to refresh a dedicated demo directory. Each export replaces
 the previous snapshot, including its selection of source excerpts.

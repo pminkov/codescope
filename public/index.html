@@ -189,6 +189,25 @@
       </section>
       <button type="button" id="ask-launcher" aria-label="Ask Codex about this view" aria-controls="ask-panel" aria-expanded="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Ask</span></button>
     </div>
+    <dialog
+      id="demo-notice-dialog"
+      role="alertdialog"
+      aria-labelledby="demo-notice-title"
+      aria-describedby="demo-notice-message"
+      closedby="any"
+    >
+      <form method="dialog">
+        <div class="source-heading">
+          <h2 id="demo-notice-title">Available in the local app</h2>
+        </div>
+        <div class="action-dialog-body">
+          <p id="demo-notice-message">This action is not available in the read-only demo.</p>
+        </div>
+        <div class="action-dialog-buttons">
+          <button class="button primary" autofocus>OK</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="job-prompts-dialog" aria-labelledby="job-prompts-title">
       <div class="source-heading"><div><span class="eyebrow">CODEX INPUT</span><h2 id="job-prompts-title">Analysis prompt</h2></div><button type="button" id="close-job-prompts" class="icon-button" aria-label="Close analysis prompt" autofocus>×</button></div>
       <div class="node-dialog-body">
@@ -239,7 +258,12 @@
       <form method="dialog">
         <div class="source-heading"><div><span class="eyebrow" id="action-project"></span><h2 id="action-title"></h2></div><button type="button" id="close-action" class="icon-button" aria-label="Close confirmation">×</button></div>
         <div class="action-dialog-body"><p id="action-description"></p><p id="action-usage"></p><p id="action-result"></p></div>
-        <div class="action-dialog-buttons"><button class="button" value="no" autofocus>No, go back</button><button class="button primary" id="confirm-action" value="yes">Yes, proceed</button></div>
+        <div class="action-dialog-buttons">
+          <button class="button" value="no" autofocus>No, go back</button>
+          <button class="button primary" id="confirm-action" value="yes" data-local-confirm>
+            Yes, proceed
+          </button>
+        </div>
       </form>
     </dialog>
     <dialog id="new-analysis-dialog" aria-labelledby="new-analysis-title">
@@ -249,7 +273,10 @@
       <form id="modify-analysis-form" method="dialog">
         <div class="source-heading"><div><span class="eyebrow" id="modify-analysis-name"></span><h2 id="modify-analysis-title">Modify analysis</h2></div><button type="button" id="close-modify-analysis" class="icon-button" aria-label="Close modification">×</button></div>
         <div class="project-form-body"><p id="modify-analysis-description">Describe what to change. The updated result will replace this saved analysis when it completes.</p><label for="modification-prompt">What would you like to change?</label><textarea id="modification-prompt" name="prompt" rows="6" required maxlength="4000" placeholder="For example, split the storage component into separate responsibilities and show their connections." autofocus></textarea><p class="form-note">Your current result stays available while the modification runs. Source files stay unchanged.</p></div>
-        <div class="action-dialog-buttons"><button class="button" value="cancel" formnovalidate>Cancel</button><button class="button primary" value="modify">Modify analysis</button></div>
+        <div class="action-dialog-buttons">
+          <button class="button" value="cancel" formnovalidate>Cancel</button>
+          <button class="button primary" value="modify" data-local-confirm>Modify analysis</button>
+        </div>
       </form>
     </dialog>
     <dialog id="project-dialog" aria-labelledby="add-project-title">
@@ -285,7 +312,10 @@
       <form method="dialog">
         <div class="source-heading"><div><span class="eyebrow">EDIT SAVED DIAGRAM</span><h2 id="delete-node-title">Delete node?</h2></div><button type="button" id="close-delete-node" class="icon-button" aria-label="Close delete confirmation">×</button></div>
         <div class="action-dialog-body"><p id="delete-node-description"></p><p>This removes the node and all its incoming and outgoing connections from this diagram’s saved JSON. This cannot be undone.</p></div>
-        <div class="action-dialog-buttons"><button class="button" value="no" autofocus>No, keep node</button><button class="button danger" value="yes">Yes, delete node</button></div>
+        <div class="action-dialog-buttons">
+          <button class="button" value="no" autofocus>No, keep node</button>
+          <button class="button danger" value="yes" data-local-confirm>Yes, delete node</button>
+        </div>
       </form>
     </dialog>
     <dialog

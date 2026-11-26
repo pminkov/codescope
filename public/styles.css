@@ -641,7 +641,7 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 #ask-send:not(:hover) { background: var(--accent-bg); }
 #ask-send:hover { background: var(--hover); }
 #project-dialog, #rename-project-dialog { width: min(620px, calc(100vw - 30px)); height: auto; max-height: calc(100dvh - 50px); overflow-y: auto; }
-#action-dialog, #new-analysis-dialog {
+#action-dialog, #new-analysis-dialog, #demo-notice-dialog {
   width: min(600px, calc(100vw - 30px));
   height: fit-content;
   max-height: calc(100dvh - 50px);
@@ -1085,7 +1085,7 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 #project-info-dialog .source-heading, #settings-dialog .source-heading { flex-shrink: 0; }
 #project-info-dialog .source-heading { align-items: flex-start; }
 #project-info-dialog .source-heading > div { min-width: 0; }
-#project-info-title, #settings-title, #new-analysis-title {
+#project-info-title, #settings-title, #new-analysis-title, #demo-notice-title {
   font: 550 1.4rem/1.35 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 #close-project-info, .settings-close, .icon-button[data-close-new-analysis] {
@@ -1152,11 +1152,10 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .endpoint-notes h3 { color: var(--text); font-size: 1rem; font-weight: 500; }
 @media (max-width: 420px) { .endpoint-server > header { flex-direction: column; gap: 6px; } .endpoint-details dl > div { grid-template-columns: 1fr; gap: 4px; } }
 
-/* A static snapshot has no local workspace or analysis worker. */
+/* These details and downloads need files that are absent from the exported snapshot. */
 html[data-demo] :is(
-  #app-settings, #add-project, #rename-project, #delete-project, .project-actions .actions-divider,
-  .project-info-fields > div:has(#project-path), .node-dialog-footer, [data-new-analysis],
-  .analysis-actions, [data-action="endpoints"], [data-scan-refresh], .presentation-toolbar [download]
+  #app-settings, #runner-status, .project-info-fields > div:has(#project-path),
+  .presentation-toolbar [download]
 ) {
   display: none;
 }

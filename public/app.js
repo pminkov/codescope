@@ -2,9 +2,7 @@ import { renderIcon } from './ui/icons.js';
 import { renderAnalysisChanges, formatAnalysisDate } from './ui/analysis-controls.js';
 import { renderNewAnalysisFormContent } from './ui/new-analysis.js';
 import { renderSourcePreview } from './ui/source-preview.js';
-import {
-  renderEmptyDemoView, renderEmptyProjectWorkspace, renderProjectLoadError,
-} from './views/workspace.js';
+import { renderEmptyProjectWorkspace, renderProjectLoadError } from './views/workspace.js';
 import {
   renderDirectoriesView,
   renderDirectoryTree,
@@ -163,7 +161,7 @@ function currentAskContext() {
   };
 }
 
-const ask = isDemo ? null : setupAsk(currentAskContext, openSource, dialogStack);
+const ask = setupAsk(currentAskContext, openSource, dialogStack, blockDemoAction);
 
 // Return every node in the browser's directory tree.
 function flattenTree(node) {
@@ -212,8 +210,7 @@ function currentRoute() {
 async function navigate(url, replace = false) {
   if (replace) history.replaceState(null, '', url);
   else if (url !== currentRouteLocation()) history.pushState(null, '', url);
-  if (isDemo) render();
-  else await loadCurrentProject();
+  await loadCurrentProject();
   if (currentRoute().tab === 'areas')
     selectElement('.area-breadcrumb [aria-current="page"]')?.focus({ preventScroll: true });
 }
@@ -860,15 +857,7 @@ function render() {
     else selectElement(`#tab-${name}`).removeAttribute('aria-current');
   }
 
-  const savedAnalyses = {
-    flows: data.flows, architecture: data.architectures, areas: data.areaAnalyses,
-    nouns: data.nounAnalyses, sequences: data.sequences, endpoints: data.endpointAnalyses,
-    presentations: data.presentations,
-  };
-  if (isDemo && savedAnalyses[tab]?.length === 0) {
-    const label = selectElement(`#tab-${tab}`).textContent.replace(/\d+/g, '').trim();
-    selectElement('#view').innerHTML = renderEmptyDemoView(label);
-  } else if (tab === 'flows') renderFlows();
+  if (tab === 'flows') renderFlows();
   else if (tab === 'architecture') renderArchitecture();
   else if (tab === 'areas') renderAreas();
   else if (tab === 'nouns') renderNouns();
@@ -886,7 +875,14 @@ function render() {
   } else if (tab === 'all') renderAllAnalyses();
   else renderDirectories();
   if (isDemo) updateDemoSourceControls(selectElement('#view'));
-  ask?.refresh();
+  ask.refresh();
+}
+
+// Stop a local operation at its point of execution while keeping the visitor's form open.
+function blockDemoAction() {
+  if (!isDemo) return false;
+  selectElement('#demo-notice-dialog').showModal();
+  return true;
 }
 
 // Fetch JSON and surface API errors as readable exceptions.
@@ -1173,11 +1169,12 @@ function renderProjectPicker() {
   if (data) selectElement('#project-picker').value = data.id;
 }
 
-// Load the current project, reject stale responses, and poll active jobs.
+// Render the static snapshot or load the current local project and poll active jobs.
 async function loadCurrentProject({ quiet = false } = {}) {
   if (deletingProject) return;
   if (newAnalysisDialog.open && newAnalysisDialog.dataset.route !== currentRouteLocation())
     newAnalysisDialog.close();
+  if (isDemo) return render();
   clearTimeout(pollTimer);
   const sequence = ++loadSequence;
   const id = currentRoute().id;
@@ -1274,8 +1271,9 @@ function confirmProjectDeletion() {
     'This cannot be undone.';
   selectElement('#action-usage').textContent =
     'Any queued or running analysis for this project will be stopped.';
-  selectElement('#action-result').textContent =
-    `Your source directory stays in place: ${data.root}.`;
+  selectElement('#action-result').textContent = data.root
+    ? `Your source directory stays in place: ${data.root}.`
+    : 'Your source directory stays in place.';
   selectElement('#confirm-action').textContent = 'Yes, delete project';
   selectElement('#confirm-action').className = 'button danger';
   dialog.returnValue = '';
@@ -1344,7 +1342,7 @@ function analysisActionUrl(projectId, kind, id, action) {
 // Restore this project's draft or suggested prompt in the shared creation dialog.
 function openNewAnalysisDialog(kind) {
   const { id, tab } = currentRoute();
-  if (!data || isDemo || deletingProject || isAnalysisBusy() || newAnalysisDialog.open ||
+  if (!data || deletingProject || isAnalysisBusy() || newAnalysisDialog.open ||
     id !== data.id || tab !== kind) return;
 
   if (!analysisDrafts.has(id)) analysisDrafts.set(id, new Map());
@@ -1378,6 +1376,7 @@ async function submitNewAnalysis(event) {
     input.reportValidity();
     return;
   }
+  if (blockDemoAction()) return;
 
   const button = newAnalysisForm.querySelector('[type="submit"]');
   const label = button.textContent;
@@ -1448,6 +1447,7 @@ async function runAnalysisAction(action, kind, id) {
     ['queued', 'running'].includes(data.job?.status)
   )
     return;
+  if (!['modify', 'delete'].includes(action) && blockDemoAction()) return;
   const projectId = data.id;
   const pathname = currentRouteLocation();
   analysisActionPending = true;
@@ -1492,7 +1492,7 @@ async function runAction(action) {
 
   try {
     if (action === 'delete' && !(await confirmProjectDeletion())) return;
-    if (data?.id !== projectId) return;
+    if (data?.id !== projectId || blockDemoAction()) return;
     if (action === 'delete') {
       await deleteCurrentProject(projectId);
 
@@ -1590,7 +1590,7 @@ function renderEmptyWorkspace() {
   ++loadSequence;
   ++sourceRequest;
   data = undefined;
-  ask?.refresh();
+  ask.refresh();
   diagramObserver?.disconnect();
   diagramObserver = undefined;
   document.title = 'CodeScope · Understand your projects';
@@ -1696,6 +1696,7 @@ async function saveProjectName(event) {
   const dialog = selectElement('#rename-project-dialog');
   const id = dialog.dataset.projectId;
   if (renamingProject || deletingProject || !data || data.id !== id) return;
+  if (blockDemoAction()) return;
   const button = selectElement('#save-project-name');
   renamingProject = true;
   button.disabled = true;
@@ -1724,6 +1725,7 @@ async function saveProjectName(event) {
 async function showAddProject() {
   selectElement('#project-form-error').textContent = '';
   selectElement('#project-dialog').showModal();
+  if (isDemo) return;
 
   try {
     const state = await fetchJson('/api/runner');
@@ -1736,7 +1738,7 @@ async function showAddProject() {
 
 // Open the native folder picker while preserving cancellation and manual entry.
 async function browseProjectDirectory() {
-  if (directoryPickerRequest) return;
+  if (directoryPickerRequest || blockDemoAction()) return;
   const controller = new AbortController();
   directoryPickerRequest = controller;
   const button = selectElement('#browse-directory');
@@ -1833,9 +1835,6 @@ async function initializeDemo() {
   projects = [data];
   renderProjectPicker();
   selectElement('.demo-label').hidden = false;
-  const launcher = selectElement('#ask-launcher');
-  launcher.title = 'Ask is available in the local app';
-  launcher.setAttribute('aria-label', launcher.title);
   const populated = data.architectures.filter(
     // Empty diagrams have no components for a visitor to explore.
     (graph) => graph.nodes.length,
@@ -1948,7 +1947,9 @@ document.addEventListener('click', (event) => {
   const menuAction = event.target.closest('[data-analysis-action]');
   if (menuAction) {
     if (menuAction.disabled) return;
-    menuAction.closest('details').open = false;
+    const menu = menuAction.closest('details');
+    menu.open = false;
+    menu.querySelector('summary').focus({ preventScroll: true });
     runAnalysisAction(
       menuAction.dataset.analysisAction,
       menuAction.dataset.analysisKind,
@@ -2021,6 +2022,7 @@ document.addEventListener('click', (event) => {
   }
 
   if (event.target.closest('[data-scan-refresh]')) {
+    if (blockDemoAction()) return;
     const button = event.target.closest('[data-scan-refresh]');
     button.disabled = true;
     button.textContent = 'Scanning…';
@@ -2326,7 +2328,7 @@ selectElement('#project-picker').addEventListener('change', (event) =>
 // Register the entered project and open its directory view.
 selectElement('#project-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (directoryPickerRequest) return;
+  if (directoryPickerRequest || blockDemoAction()) return;
   const button = selectElement('#submit-project');
   button.disabled = true;
   selectElement('#project-form-error').textContent = '';
@@ -2350,6 +2352,12 @@ selectElement('#project-form').addEventListener('submit', async (event) => {
 // Submit the shared form to the current analysis endpoint.
 newAnalysisForm.addEventListener('submit', submitNewAnalysis);
 
+// Keep native confirmation dialogs open when their accepted action needs the local app.
+document.addEventListener('submit', (event) => {
+  if (!event.defaultPrevented && event.submitter?.hasAttribute('data-local-confirm') &&
+    blockDemoAction()) event.preventDefault();
+});
+
 // Dismiss the new-analysis form from either close control or its backdrop.
 newAnalysisDialog.addEventListener('click', (event) => {
   if (event.target === newAnalysisDialog || event.target.closest('[data-close-new-analysis]'))
@@ -2363,10 +2371,7 @@ newAnalysisDialog.addEventListener('close', () => {
 });
 
 // Restore the current project view after browser history navigation.
-window.addEventListener('popstate', () => {
-  if (isDemo) render();
-  else loadCurrentProject();
-});
+window.addEventListener('popstate', () => loadCurrentProject());
 
 // Navigate slides only when a presentation is visible and no text field or dialog owns input.
 document.addEventListener('keydown', (event) => {
