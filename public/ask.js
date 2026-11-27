@@ -116,13 +116,24 @@ function renderAskActivity(message) {
     return `<details class="ask-activity"><summary>${message.error ? 'Stopped' : 'Worked'} for ${seconds}s</summary><ul>${items}</ul></details>`;
   }
 
-  return `<div class="ask-progress" role="status"><div><span class="loading-dot"></span>Codex is working <time id="ask-elapsed">0:00</time></div><ul>${items}</ul></div>`;
+  return /* HTML */ `
+    <div class="ask-progress" role="status">
+      <div>
+        <span class="loading-dot"></span>Working
+        <time id="ask-elapsed">0:00</time>
+        ${message.assistant
+          ? `<span class="ask-assistant">Using ${escapeHtml(message.assistant)}</span>`
+          : ''}
+      </div>
+      <ul>${items}</ul>
+    </div>
+  `;
 }
 
 // Render a question, its completed answer or error, and its execution activity.
 function renderAskTurn(message) {
   const result = message.answer
-    ? `<div class="ask-answer"><span class="eyebrow">CODEX</span><div>${renderAskAnswer(message.answer, message.references)}</div></div>`
+    ? `<div class="ask-answer"><span class="eyebrow">ANSWER</span><div>${renderAskAnswer(message.answer, message.references)}</div></div>`
     : message.error ? `<p class="ask-error" role="alert">${escapeHtml(message.error)}</p>` : '';
 
   return `<article class="ask-turn"><p class="ask-turn-context">${escapeHtml(message.context)}</p><div class="ask-user">${formatText(message.question)}</div>${renderAskActivity(message)}${result}</article>`;
@@ -173,7 +184,7 @@ export function setupAsk(getContext, openSource, dialogStack, blockDemoAction) {
   function renderChat() {
     const nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 70;
     messages.innerHTML = chat?.messages.length ? chat.messages.map(renderAskTurn).join('')
-      : '<div class="ask-empty"><h3>Ask about what you’re viewing</h3><p>Ask about a diagram, a source preview, or anything on this page. Codex checks the project’s source to answer.</p></div>';
+      : '<div class="ask-empty"><h3>Ask about what you’re viewing</h3><p>Ask about a diagram, a source preview, or anything on this page. The assistant checks the project’s source to answer.</p></div>';
     submit.disabled = !chat || Boolean(chat.active) || !input.value.trim();
     stop.hidden = !chat?.active;
     document.querySelector('#ask-new').disabled = !chat || Boolean(chat.active);
@@ -317,10 +328,11 @@ export function setupAsk(getContext, openSource, dialogStack, blockDemoAction) {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Could not ask Codex. Try again.');
+        throw new Error(error.error || 'Could not get an answer. Try again.');
       }
       // Apply complete stream events while retaining the original project as owner.
       await readAnswerStream(response, (update) => {
+        if (update.type === 'progress' && update.assistant) message.assistant = update.assistant;
         if (update.type === 'progress' && message.progress.at(-1) !== update.message)
           message.progress = [...message.progress, update.message].slice(-4);
         if (update.type === 'answer') {

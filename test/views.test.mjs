@@ -289,12 +289,15 @@ test('progress cards retain retry, close, cancellation, and message presentation
   assert.match(failed, /data-action="retry"/);
   assert.match(failed, /data-action="dismiss-job"/);
   const running = renderJobProgress(
-    { kind: 'flow', status: 'running' },
+    { kind: 'flow', status: 'running', assistant: 'Claude Code' },
     {
       ...options,
       busy: true,
     },
   );
+  assert.match(running, /Using Claude Code/);
+  const codex = renderJobProgress({ kind: 'flow', status: 'running', assistant: 'Codex' }, options);
+  assert.match(codex, /Using Codex/);
   assert.match(running, /data-action="cancel"/);
   assert.doesNotMatch(running, /data-action="retry"|data-action="dismiss-job"/);
 });

@@ -1,6 +1,6 @@
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { flattenTree, readSource, fingerprint } from './analysis.mjs';
 import { schemas, validateSchema } from './schemas.mjs';
@@ -10,30 +10,50 @@ import { validatePresentation } from './presentation.mjs';
 const exec = promisify(execFile);
 export const defaultCodex = process.env.CODESCOPE_CODEX_BIN || 'codex';
 
-// Check CLI availability and saved authentication without starting analysis.
-export async function codexStatus(command = defaultCodex) {
+export const defaultClaude = process.env.CODESCOPE_CLAUDE_BIN || 'claude';
+
+// Check the configured executable and retain its invocation for Settings.
+async function checkAssistant(id, executable, args) {
+  const command = [executable, ...args];
   try {
-    const { stdout, stderr } = await exec(command, ['login', 'status'], {
-      timeout: 10000,
-      maxBuffer: 16384,
-    });
-    return {
-      available: true,
-      authenticated: true,
-      message: `${stdout} ${stderr}`.includes('ChatGPT')
-        ? 'Connected with your saved ChatGPT login.'
-        : 'Connected with saved Codex authentication.',
-    };
+    const { stdout } = await exec(executable, args, { timeout: 10000, maxBuffer: 16384 });
+    if (id === 'codex') return { id, command, ready: true, result: 'Signed in (exit code 0).' };
+
+    const { loggedIn } = JSON.parse(stdout);
+    if (typeof loggedIn !== 'boolean') throw new Error('Unexpected authentication response.');
+    return { id, command, ready: loggedIn, result: `Returned loggedIn: ${loggedIn}.` };
   } catch (error) {
-    return {
-      available: error.code !== 'ENOENT',
-      authenticated: false,
-      message:
-        error.code === 'ENOENT'
-          ? 'Codex CLI was not found. Install it or set CODESCOPE_CODEX_BIN, then restart CodeScope.'
-          : 'Sign in with codex login in your terminal, then retry analysis.',
-    };
+    let result = 'Could not read the authentication status.';
+    if (error.code === 'ENOENT') result = 'Executable not found.';
+    else if (error.killed) result = 'The status check timed out.';
+    else if (Number.isInteger(error.code)) result = `Status command exited with code ${error.code}.`;
+
+    return { id, command, ready: false, result };
   }
+}
+
+// Run both sign-in checks concurrently and share their results with the picker.
+export function checkAssistants() {
+  return Promise.all([
+    checkAssistant('codex', defaultCodex, ['login', 'status']),
+    checkAssistant('claude', defaultClaude, ['auth', 'status', '--json']),
+  ]);
+}
+
+// Identify the CLI handling an analysis or Ask request.
+export function assistantName(run) {
+  return run === runClaude ? 'Claude Code' : run === runCodex ? 'Codex' : null;
+}
+
+// Start Claude with read-only tools confined to the staged source snapshot.
+export async function runClaude(options) {
+  const schema = await readFile(options.schemaPath, 'utf8');
+  const args = [
+    '-p', '--restricted', '--strict-mcp-config', '--no-session-persistence',
+    '--tools', 'Read,Glob,Grep', '--allowedTools', 'Read,Glob,Grep',
+    '--output-format', 'json', '--json-schema', schema,
+  ];
+  return runAssistantProcess({ ...options, command: defaultClaude, args, name: 'Claude Code' });
 }
 
 // Copy bounded indexed text into a read-only snapshot, prioritizing a requested scope.
@@ -455,13 +475,20 @@ export function validateAnalysis(stage, value, index, snapshot) {
 }
 
 // Run a bounded Codex process and parse its streamed analysis result.
-export function runCodex({
+export function runCodex(options) {
+  return runAssistantProcess(options);
+}
+
+// Supervise either CLI with bounded output, cancellation and a deadline.
+function runAssistantProcess({
   root,
   schemaPath,
   prompt,
   signal,
   // Allow callers to omit progress reporting.
   onProgress = () => {},
+  args,
+  name = 'Codex',
   command = defaultCodex,
   timeoutMs = 10 * 60 * 1000,
 }) {
@@ -471,7 +498,7 @@ export function runCodex({
       if (signal?.aborted) return reject(new Error('Analysis cancelled.'));
       const child = spawn(
         command,
-        [
+        args || [
           'exec',
           '--cd',
           root,
@@ -485,7 +512,7 @@ export function runCodex({
           schemaPath,
           '-',
         ],
-        { stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32', shell: false },
+        { cwd: args ? root : undefined, stdio: 'pipe', detached: process.platform !== 'win32' },
       );
       let pending = '';
       let finalMessage = '';
@@ -539,6 +566,10 @@ export function runCodex({
           return;
         }
 
+        if (event.type === 'result') {
+          if (event.is_error) eventFailure = event.result || 'Claude Code failed.';
+          else finalMessage = JSON.stringify(event.structured_output);
+        }
         if (event.type === 'item.completed' && event.item?.type === 'agent_message')
           finalMessage = event.item.text;
         if (event.type === 'turn.failed')
@@ -556,7 +587,7 @@ export function runCodex({
       child.stdout.on('data', (chunk) => {
         pending += chunk.toString();
         if (pending.length > 4 * 1024 * 1024) {
-          stopCodex('Codex output exceeded the analysis limit.');
+          stopCodex('Assistant output exceeded the analysis limit.');
           return;
         }
 
@@ -593,8 +624,8 @@ export function runCodex({
         finishCodex(
           new Error(
             error.code === 'ENOENT'
-              ? 'Codex CLI was not found. Install it or set CODESCOPE_CODEX_BIN, then restart CodeScope.'
-              : `Could not start Codex: ${error.message}`,
+              ? `${name} CLI was not found.`
+              : `Could not start ${name}: ${error.message}`,
           ),
         ),
       );
@@ -604,13 +635,13 @@ export function runCodex({
         if (stopReason) return finishCodex(new Error(stopReason));
         if (code !== 0 || eventFailure)
           return finishCodex(
-            new Error((eventFailure || stderr || `Codex exited with code ${code}.`).slice(-2500)),
+            new Error((eventFailure || stderr || `${name} exited with code ${code}.`).slice(-2500)),
           );
 
         try {
           finishCodex(null, JSON.parse(finalMessage));
         } catch {
-          finishCodex(new Error('Codex did not return valid analysis JSON. Retry the analysis.'));
+          finishCodex(new Error(`${name} did not return valid analysis JSON. Retry the analysis.`));
         }
       });
       child.stdin.end(prompt);

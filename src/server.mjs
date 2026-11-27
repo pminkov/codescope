@@ -4,7 +4,6 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { ProjectStore } from './storage.mjs';
 import { readSource, fail } from './analysis.mjs';
-import { codexStatus } from './runner.mjs';
 import { createDirectoryPicker } from './native-dialog.mjs';
 import { AskService } from './ask.mjs';
 import { renderPresentationDocument } from '../public/views/presentations.js';
@@ -127,7 +126,7 @@ async function handleProjectRequest(request, url, match, store, json) {
 // Create the local HTTP server with injectable storage and integrations.
 export function createApp({
   store = new ProjectStore(),
-  runnerStatus = codexStatus,
+  runnerStatus = store.assistantStatus.bind(store),
   chooseDirectory = createDirectoryPicker(),
 } = {}) {
   const questions = new AskService(store);
@@ -164,7 +163,8 @@ export function createApp({
         }
 
         if (url.pathname === '/api/runner') {
-          if (request.method === 'POST') throw fail('Method not allowed.', 405);
+          if (request.method === 'POST')
+            return json(await store.selectAssistant((await readJsonBody(request)).assistant));
           return json(await runnerStatus());
         }
 

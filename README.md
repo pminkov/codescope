@@ -6,7 +6,7 @@
 </h1>
 
 <p align="center">
-  CodeScope uses the Codex CLI to turn a local repository into diagrams and walkthroughs.
+  CodeScope uses Codex or Claude Code to turn a local repository into diagrams and walkthroughs.
   Follow a request across components, then open the source lines behind each step in your browser.
 </p>
 
@@ -55,14 +55,14 @@ completed analysis saved?” Answers link to the relevant lines of code.
 
 ## Run
 
-Install Node.js 22 or later and the [Codex CLI](https://developers.openai.com/codex/cli/).
-Make sure `codex` is on your `PATH`.
+Install Node.js 22 or later and either the [Codex CLI](https://developers.openai.com/codex/cli/) or
+[Claude Code](https://code.claude.com/docs/en/overview) with support for `--restricted`.
+Put the CLI on your `PATH` and sign in with `codex login` or `claude auth login`.
 
 ```sh
 git clone https://github.com/pminkov/codescope.git
 cd codescope
 npm ci
-codex login
 npm start
 ```
 
@@ -70,6 +70,11 @@ Open [127.0.0.1:4310](http://127.0.0.1:4310) and choose **Add project**. Select
 the `codescope` folder you just cloned, or paste the absolute path to another
 project. Choose **Add and analyze** to generate a directory guide and an
 architecture overview.
+
+CodeScope uses the only signed-in CLI automatically. When both are ready,
+choose an **AI assistant** in **Settings**. The choice is
+saved across restarts and applies to analyses and Ask in every project.
+
 
 ## Working with saved analyses
 
@@ -96,6 +101,7 @@ CODESCOPE_DATA_DIR="/path/to/data" PORT=4311 npm start
 ```
 
 - `CODESCOPE_DATA_DIR` sets the folder for saved projects and analyses (default `.codescope/`).
+- `CODESCOPE_CLAUDE_BIN` selects the Claude Code executable (default `claude`).
 - `CODESCOPE_CODEX_BIN` selects the Codex executable (default `codex`).
 - `PORT` sets the local port (default `4310`).
 
@@ -108,8 +114,8 @@ new location when changing `CODESCOPE_DATA_DIR`.
 
 CodeScope treats the selected project's source files as read-only. Scanning
 respects `.gitignore` and `.codescopeignore` and skips hidden files and common
-key files. When you generate an analysis or use **Ask**, the Codex CLI sends
-filtered source to OpenAI.
+key files. When you generate an analysis or use **Ask**, the selected CLI sends
+filtered source to its configured model provider.
 
 Saved job history includes source snapshots and prompts. The default
 `.codescope/` data directory is gitignored.

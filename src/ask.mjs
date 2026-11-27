@@ -1,7 +1,7 @@
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createSnapshot } from './runner.mjs';
+import { assistantName, createSnapshot } from './runner.mjs';
 import { fail, flattenTree } from './analysis.mjs';
 import { validateSchema } from './schemas.mjs';
 
@@ -35,17 +35,17 @@ export function validateAnswer(result, snapshot) {
   validateSchema(result, answerSchema);
   const ids = new Set();
   for (const reference of result.references) {
-    if (ids.has(reference.id)) throw new Error('Codex returned a duplicate source reference.');
+    if (ids.has(reference.id)) throw new Error('The assistant returned a duplicate source reference.');
     ids.add(reference.id);
     if (!Object.hasOwn(snapshot.sources, reference.path))
-      throw new Error('Codex referenced a file outside the available source snapshot.');
+      throw new Error('The assistant referenced a file outside the available source snapshot.');
     const lines = snapshot.sources[reference.path].split('\n').length;
     if (reference.line > lines || reference.endLine !== null &&
         (reference.endLine < reference.line || reference.endLine > lines))
-      throw new Error('Codex referenced a line outside the available source file.');
+      throw new Error('The assistant referenced a line outside the available source file.');
   }
   for (const match of result.answer.matchAll(/\[[^\]\r\n]+\]\(source:([a-zA-Z0-9_-]+)\)/g))
-    if (!ids.has(match[1])) throw new Error('Codex returned an unresolved source reference.');
+    if (!ids.has(match[1])) throw new Error('The assistant returned an unresolved source reference.');
 
   return result;
 }
@@ -156,7 +156,7 @@ export class AskService {
     const request = validateQuestion(body);
     if (this.closed) throw fail('The server is shutting down.', 503);
     if (this.active.has(id)) throw fail('A question is already running for this project.', 409);
-    if (this.active.size >= 2) throw fail('Codex is answering other questions. Try again shortly.', 429);
+    if (this.active.size >= 2) throw fail('The assistant is answering other questions. Try again shortly.', 429);
     const controller = new AbortController();
     this.active.set(id, controller);
     let directory;
@@ -183,8 +183,9 @@ export class AskService {
         controller.signal, `${request.context.selection}\n${request.context.excerpt}`);
       const schemaPath = join(directory, 'answer.schema.json');
       await writeFile(schemaPath, JSON.stringify(answerSchema), { mode: 0o600 });
-      sendEvent({ type: 'progress', message: 'Starting Codex…' });
-      const result = await this.store.run({
+      const run = await this.store.resolveAssistantRunner();
+      sendEvent({ type: 'progress', message: 'Starting the assistant…', assistant: assistantName(run) });
+      const result = await run({
         root: snapshot.root, schemaPath,
         prompt: questionPrompt(view, request, selected, snapshot),
         signal: controller.signal,

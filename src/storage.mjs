@@ -2,7 +2,9 @@ import { mkdir, readFile, writeFile, rename, readdir, rm } from 'node:fs/promise
 import { resolve, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validateRoot, indexProject, projectView, fail } from './analysis.mjs';
-import { createSnapshot, analyzeStage, runCodex } from './runner.mjs';
+import {
+  createSnapshot, analyzeStage, checkAssistants, assistantName, runClaude, runCodex,
+} from './runner.mjs';
 import { prepareJobHistory, pruneJobHistory } from './job-history.mjs';
 
 // Load saved JSON or clone a fallback when the file does not exist.
@@ -231,7 +233,7 @@ export class ProjectStore {
   // Initialize storage paths, queue state, and asynchronous registry loading.
   constructor({
     dataDirectory = process.env.CODESCOPE_DATA_DIR || resolve(import.meta.dirname, '../.codescope'),
-    run = runCodex,
+    run,
   } = {}) {
     this.directory = resolve(dataDirectory);
     this.run = run;
@@ -242,6 +244,41 @@ export class ProjectStore {
     this.writes = Promise.resolve();
     this.edits = new Map();
     this.initializing = this.initialize();
+  }
+
+  // Resolve the saved preference against the currently signed-in CLIs.
+  async assistantStatus() {
+    const [checks, saved] = await Promise.all([
+      checkAssistants(),
+      readJson(resolve(this.directory, 'assistant.json'), null),
+    ]);
+    const ready = [];
+    for (const check of checks) {
+      if (check.ready) ready.push(check.id);
+    }
+    const selected = ready.length === 1 ? ready[0] : ready.includes(saved) ? saved : null;
+    const message = selected ? 'Assistant ready.' : ready.length
+      ? 'Choose an AI assistant for analyses and Ask.'
+      : 'Install and sign in to Codex or Claude Code.';
+
+    return { ready, selected, message, checks };
+  }
+
+  // Persist an explicit choice shared by all projects and chats.
+  async selectAssistant(id) {
+    const status = await this.assistantStatus();
+    if (!status.ready.includes(id)) throw fail('Assistant is unavailable.');
+    await writeJson(resolve(this.directory, 'assistant.json'), id);
+    return { ...status, selected: id, message: 'Assistant ready.' };
+  }
+
+  // Dispatch analyses and Ask through the same resolved preference.
+  async resolveAssistantRunner() {
+    if (this.run) return this.run;
+
+    const { selected, message } = await this.assistantStatus();
+    if (!selected) throw fail(message + ' Open Settings to choose an assistant.');
+    return selected === 'claude' ? runClaude : runCodex;
   }
 
   // Resolve a project-owned storage path after validating its identifier.
@@ -705,7 +742,9 @@ export class ProjectStore {
 
     try {
       const historyDirectory = await prepareJobHistory(this.path(project.id, '.'));
+      const run = await this.resolveAssistantRunner();
       await this.updateJob(job, {
+        assistant: assistantName(run),
         status: 'running',
         stage: 'indexing',
         message: 'Indexing directories and hashing source files…',
@@ -724,7 +763,7 @@ export class ProjectStore {
         ['nouns', 'areas', 'sequence', 'presentation'].includes(job.kind) ? job.feature || '' : '',
       );
       await this.updateJob(job, { coverage: snapshot.coverage });
-      await this.runAnalysisStages(project, job, index, snapshot, directory, signal);
+      await this.runAnalysisStages(project, job, index, snapshot, directory, signal, run);
 
       await this.updateJob(job, {
         status: 'completed',
@@ -753,7 +792,7 @@ export class ProjectStore {
   }
 
   // Run requested stages in order and persist each successful result.
-  async runAnalysisStages(project, job, index, snapshot, directory, signal) {
+  async runAnalysisStages(project, job, index, snapshot, directory, signal, run) {
     const stages =
       {
         directories: ['directories'], flow: ['flow'], architecture: ['architecture'],
@@ -802,7 +841,7 @@ export class ProjectStore {
         understanding,
         revision: savedAnalysisRevision(understanding, stage, job),
         signal,
-        run: this.run,
+        run,
 
         // Throttle progress writes and ignore messages after cancellation.
         onProgress: (message) => {

@@ -178,16 +178,16 @@
     </main>
     <div id="ask-widget">
       <section id="ask-panel" role="dialog" aria-labelledby="ask-title" hidden>
-        <header class="ask-heading"><div><span class="eyebrow">ASK CODEX</span><h2 id="ask-title">About this view</h2></div><button type="button" id="ask-new" class="button">New chat</button><button type="button" id="ask-close" class="icon-button" aria-label="Close Ask">×</button></header>
+        <header class="ask-heading"><div><span class="eyebrow">ASK</span><h2 id="ask-title">About this view</h2></div><button type="button" id="ask-new" class="button">New chat</button><button type="button" id="ask-close" class="icon-button" aria-label="Close Ask">×</button></header>
         <p id="ask-context" class="ask-context"></p>
-        <div id="ask-messages" role="log" aria-label="Conversation with Codex" aria-live="polite" tabindex="0"></div>
+        <div id="ask-messages" role="log" aria-label="Conversation" aria-live="polite" tabindex="0"></div>
         <form id="ask-form">
           <label for="ask-question">Your question</label>
           <textarea id="ask-question" rows="3" maxlength="4000" required placeholder="What would you like to understand?"></textarea>
           <div class="ask-form-footer"><span>Uses this view and project source</span><button type="button" id="ask-stop" class="button" hidden>Stop</button><button type="submit" id="ask-send" class="button primary" disabled>Send question ↑</button></div>
         </form>
       </section>
-      <button type="button" id="ask-launcher" aria-label="Ask Codex about this view" aria-controls="ask-panel" aria-expanded="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Ask</span></button>
+      <button type="button" id="ask-launcher" aria-label="Ask about this view" aria-controls="ask-panel" aria-expanded="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Ask</span></button>
     </div>
     <dialog
       id="demo-notice-dialog"
@@ -209,7 +209,7 @@
       </form>
     </dialog>
     <dialog id="job-prompts-dialog" aria-labelledby="job-prompts-title">
-      <div class="source-heading"><div><span class="eyebrow">CODEX INPUT</span><h2 id="job-prompts-title">Analysis prompt</h2></div><button type="button" id="close-job-prompts" class="icon-button" aria-label="Close analysis prompt" autofocus>×</button></div>
+      <div class="source-heading"><div><span class="eyebrow">ANALYSIS INPUT</span><h2 id="job-prompts-title">Analysis prompt</h2></div><button type="button" id="close-job-prompts" class="icon-button" aria-label="Close analysis prompt" autofocus>×</button></div>
       <div class="node-dialog-body">
         <p id="job-prompts-status" role="status">Loading prompt…</p>
         <div id="job-prompts-content" hidden>
@@ -220,7 +220,7 @@
             <button type="button" id="job-input-schema" class="button" data-job-input="schema" aria-pressed="false">Output schema</button>
           </div>
           <p class="job-prompt-location"><span id="job-input-label">Saved prompt</span><code id="job-prompt-path"></code></p>
-          <pre id="job-prompt-text" tabindex="0" aria-label="Exact prompt sent to Codex"></pre>
+          <pre id="job-prompt-text" tabindex="0" aria-label="Exact prompt sent to the assistant"></pre>
         </div>
       </div>
     </dialog>
@@ -230,6 +230,32 @@
         <button class="icon-button settings-close" aria-label="Close settings" autofocus>×</button>
       </form>
       <div class="node-dialog-body">
+        <fieldset data-assistant class="assistant-field">
+          <legend>AI assistant</legend>
+          <div class="assistant-setting-row">
+            <div class="assistant-options" hidden>
+              <label>
+                <input type="radio" name="settings-assistant" value="codex">
+                <span>Codex</span>
+              </label>
+              <label>
+                <input type="radio" name="settings-assistant" value="claude">
+                <span>Claude Code</span>
+              </label>
+            </div>
+            <p data-assistant-status role="status"></p>
+            <button
+              type="button"
+              id="assistant-checks-info"
+              class="icon-button"
+              data-icon="info"
+              aria-label="How CodeScope detects AI assistants"
+              aria-haspopup="dialog"
+              aria-controls="assistant-checks-dialog"
+              title="How CodeScope detects AI assistants"
+            ></button>
+          </div>
+        </fieldset>
         <h3 class="settings-heading">Data folder</h3>
         <p class="settings-description">CodeScope stores saved analyses and job history here.</p>
         <div id="settings-storage" hidden>
@@ -243,6 +269,46 @@
           </p>
         </div>
         <p class="settings-status" id="settings-status" role="status"></p>
+      </div>
+    </dialog>
+    <dialog id="assistant-checks-dialog" aria-labelledby="assistant-checks-title">
+      <form class="source-heading" method="dialog">
+        <h2 id="assistant-checks-title">Assistant detection</h2>
+        <button class="icon-button settings-close" aria-label="Close assistant detection">×</button>
+      </form>
+      <div class="node-dialog-body">
+        <p class="settings-description">
+          CodeScope runs these local commands to check which assistants are signed in.
+        </p>
+        <dl class="project-info-fields">
+          <div>
+            <dt>Codex</dt>
+            <dd class="settings-location">
+              <code id="codex-check-command"></code>
+              <button
+                type="button"
+                class="button"
+                data-copy-command="codex-check-command"
+                aria-label="Copy Codex command"
+              >Copy</button>
+            </dd>
+            <dd id="codex-check-result"></dd>
+          </div>
+          <div>
+            <dt>Claude Code</dt>
+            <dd class="settings-location">
+              <code id="claude-check-command"></code>
+              <button
+                type="button"
+                class="button"
+                data-copy-command="claude-check-command"
+                aria-label="Copy Claude Code command"
+              >Copy</button>
+            </dd>
+            <dd id="claude-check-result"></dd>
+          </div>
+        </dl>
+        <p id="command-copy-status" class="settings-status" role="status"></p>
       </div>
     </dialog>
     <dialog id="project-info-dialog" aria-labelledby="project-info-title">
@@ -281,7 +347,8 @@
     </dialog>
     <dialog id="project-dialog" aria-labelledby="add-project-title">
       <form id="project-form"><div class="source-heading"><div><span class="eyebrow">LOCAL WORKSPACE</span><h2 id="add-project-title">Add a project</h2></div><button type="button" id="close-project" class="icon-button" aria-label="Close Add project">×</button></div>
-      <div class="project-form-body"><p>Point CodeScope at a local repository or directory. Your files stay in place.</p><label for="project-directory">Directory path</label><div class="directory-picker-field"><input id="project-directory" name="path" required placeholder="Choose a folder or paste a path" autocomplete="off" spellcheck="false"><button id="browse-directory" class="button" type="button">Browse…</button></div><label for="new-project-name">Project name <span>(optional)</span></label><input id="new-project-name" name="name" maxlength="100" placeholder="Defaults to the folder name" autocomplete="off"><p class="form-note">Analysis runs through your local Codex CLI and sends the filtered source to OpenAI. Results are stored by CodeScope; the selected directory is read-only.</p><p id="runner-status" class="form-note">Checking Codex…</p><p id="project-form-error" role="alert"></p><button id="submit-project" class="button primary" type="submit">Add and analyze</button></div></form>
+      <div class="project-form-body"><p>Point CodeScope at a local repository or directory. Your files stay in place.</p><label for="project-directory">Directory path</label><div class="directory-picker-field"><input id="project-directory" name="path" required placeholder="Choose a folder or paste a path" autocomplete="off" spellcheck="false"><button id="browse-directory" class="button" type="button">Browse…</button></div><label for="new-project-name">Project name <span>(optional)</span></label><input id="new-project-name" name="name" maxlength="100" placeholder="Defaults to the folder name" autocomplete="off"><p class="form-note">Analysis runs through the selected CLI and sends filtered source to its configured provider. Results are stored by CodeScope; the selected directory is read-only.</p>
+        <p id="project-form-error" role="alert"></p><button id="submit-project" class="button primary" type="submit">Add and analyze</button></div></form>
     </dialog>
     <dialog id="rename-project-dialog" aria-labelledby="rename-project-title" aria-describedby="rename-project-description">
       <form id="rename-project-form">

@@ -677,7 +677,8 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .job-type { padding: 2px 8px; border: 1px solid var(--soft-border); border-radius: 4px; background: var(--panel-raised); color: var(--text); }
 .job-status { display: inline-flex; align-items: center; gap: 6px; }
 .job-status .icon { width: 16px; height: 16px; }
-.job-elapsed { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .875em; white-space: nowrap; }
+.ask-assistant, .job-assistant, .job-elapsed { color: var(--muted); font-size: .875rem; white-space: nowrap; }
+.job-elapsed { display: inline-flex; align-items: center; gap: 7px; }
 .job-elapsed .icon { width: 15px; height: 15px; }
 #job-elapsed-time { min-width: 5ch; font-variant-numeric: tabular-nums; }
 /* Reserve four single-line rows while keeping short histories packed at the top. */
@@ -984,7 +985,8 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .sequence-zoom-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 .sequence-zoom-button { min-width: 34px; min-height: 34px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel); color: var(--text); font: inherit; }
 .sequence-zoom-button:hover:enabled { background: var(--hover); border-color: var(--accent-line); }
-.sequence-zoom-button[aria-pressed='true'] {
+.sequence-zoom-button[aria-pressed='true'],
+.assistant-field input:checked + span {
   background: var(--selected-tab-bg);
   border-color: var(--selected-tab-border);
   color: var(--tab-label);
@@ -1076,7 +1078,7 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 }
 
 /* Keep metadata readable in compact dialogs with scrollable bodies. */
-#project-info-dialog, #settings-dialog {
+#project-info-dialog, #settings-dialog, #assistant-checks-dialog {
   width: min(620px, calc(100vw - 32px));
   height: fit-content;
   max-height: calc(100dvh - 48px);
@@ -1099,7 +1101,8 @@ dialog::backdrop { background: #010409be; backdrop-filter: blur(4px); }
 .stack-empty { color: var(--faint); font-size: .875rem; }
 
 #settings-title { margin: 0; }
-.settings-heading { margin: 3px 0 6px; font-size: 1rem; font-weight: 600; }
+.settings-heading { margin: 3px 0 6px; font-weight: 600; }
+.settings-heading, #settings-dialog .assistant-field legend { font-size: 1rem; }
 .settings-description, .settings-note, .settings-status { color: var(--muted); font-size: .875rem; }
 .settings-description { margin: 0 0 12px; }
 .settings-location {
@@ -1173,3 +1176,33 @@ html[data-demo] .source-code + .source-code {
   color: var(--muted);
   font-size: .875rem;
 }
+
+.assistant-field { min-width: 0; border: 0; margin: 0 0 1rem; padding: 0; }
+.assistant-field legend { margin-bottom: 8px; padding: 0; font-size: .875rem; font-weight: 600; }
+.assistant-options:not([hidden]) {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.assistant-field .assistant-options label { position: relative; margin: 0; cursor: pointer; }
+.assistant-options label input { position: absolute; opacity: 0; inset: 0; pointer-events: none; }
+.assistant-field .assistant-options span {
+  display: block;
+  padding: 6px 15px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: .875rem; line-height: 1.4; font-weight: 500;
+}
+.assistant-options label:hover span { color: var(--text); }
+.assistant-options input:focus-visible + span { outline: 2px solid var(--accent); }
+.assistant-field [role=status] { margin: 0; color: var(--muted); font-size: .875rem; }
+.assistant-options:not([hidden]) + [role=status]:not(:empty) { margin-top: 6px; }
+.assistant-field [role=status]:empty { display: none; }
+
+.assistant-setting-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#assistant-checks-info { width: 28px; height: 28px; border-color: transparent; }
+#assistant-checks-info .icon { width: 16px; height: 16px; }
+#assistant-checks-dialog code { overflow-wrap: anywhere; }

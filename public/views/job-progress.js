@@ -86,7 +86,9 @@ export function renderJobProgress(job, {
           <span class="job-type">${escape(label)}</span>
           ${
             job.status === 'running'
-              ? ''
+              ? job.assistant
+                ? `<span class="job-assistant">Using ${escape(job.assistant)}</span>`
+                : ''
               : /* HTML */ `
                   <span class="job-status">
                     ${completed ? `${renderIcon('check')} Analysis complete` : escape(job.status)}

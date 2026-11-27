@@ -963,7 +963,7 @@ function renderSelectedJobPrompt() {
   const preview = selectElement('#job-prompt-text');
   preview.setAttribute(
     'aria-label',
-    schemaSelected ? 'Output schema supplied to Codex' : 'Exact prompt sent to Codex',
+    schemaSelected ? 'Output schema supplied to the assistant' : 'Exact prompt sent to the assistant',
   );
   if (preview.textContent !== content) preview.textContent = content;
 }
@@ -1070,6 +1070,7 @@ function renderJob() {
     data.id,
     job.id,
     job.kind,
+    job.assistant,
     job.status,
     job.stage,
     job.startedAt,
@@ -1642,6 +1643,7 @@ async function showAppSettings() {
   storage.hidden = true;
   status.textContent = 'Loading storage location…';
   dialog.showModal();
+  void loadAssistantPicker(dialog);
 
   try {
     const { dataDirectory } = await fetchJson('/api/settings');
@@ -1728,19 +1730,64 @@ async function saveProjectName(event) {
   }
 }
 
-// Open project registration and show the runner's availability.
-async function showAddProject() {
+// Open the form for a new local project.
+function showAddProject() {
   selectElement('#project-form-error').textContent = '';
   selectElement('#project-dialog').showModal();
-  if (isDemo) return;
+}
+
+// Show readiness and save the app-wide preference in Settings.
+async function loadAssistantPicker(dialog) {
+  const picker = dialog.querySelector('[data-assistant]');
+  const status = dialog.querySelector('[data-assistant-status]');
+  const options = picker.querySelector('.assistant-options');
+  const radios = options.querySelectorAll('input');
+  options.hidden = true;
+  const info = selectElement('#assistant-checks-info');
+  info.disabled = true;
+  let savedSelection;
+  options.inert = true;
+  status.textContent = 'Checking assistants…';
+
+  // Reflect only choices that can start a local CLI session.
+  function displayAssistants(state) {
+    savedSelection = state.selected;
+    for (const radio of radios) radio.checked = radio.value === savedSelection;
+    options.hidden = state.ready.length < 2;
+    options.inert = false;
+    for (const check of state.checks) {
+      const command = check.command.map(
+        // Quote executable paths and arguments as a shell would require.
+        (arg) => /^[a-zA-Z0-9_./-]+$/.test(arg) ? arg : "'" + arg.replaceAll("'", "'\\''") + "'",
+      ).join(' ');
+      selectElement(`#${check.id}-check-command`).textContent = command;
+      selectElement(`#${check.id}-check-result`).textContent = check.result;
+    }
+    info.disabled = false;
+    if (state.ready.length === 1) {
+      status.textContent = state.selected === 'codex' ? 'Codex' : 'Claude Code';
+    } else {
+      status.textContent = savedSelection ? '' : state.message;
+    }
+  }
 
   try {
-    const state = await fetchJson('/api/runner');
-    selectElement('#runner-status').textContent = state.message;
-  } catch {
-    selectElement('#runner-status').textContent =
-      'Codex availability will be checked when analysis starts.';
+    displayAssistants(await fetchJson('/api/runner'));
+  } catch (error) {
+    status.textContent = error.message;
   }
+
+  // Save the preference for every project and Ask conversation.
+  picker.onchange = async (event) => {
+    options.inert = true;
+    try {
+      displayAssistants(await postJson('/api/runner', { assistant: event.target.value }));
+    } catch (error) {
+      options.inert = false;
+      for (const radio of radios) radio.checked = radio.value === savedSelection;
+      status.textContent = error.message;
+    }
+  };
 }
 
 // Open the native folder picker while preserving cancellation and manual entry.
@@ -2269,6 +2316,29 @@ selectElement('#action-dialog').addEventListener('click', (event) => {
     event.target.close('no');
 });
 // Open application settings from the toolbar, independent of the current project.
+// Copy the displayed shell command, including any quoted executable path.
+async function copyAssistantCommand(event) {
+  const button = event.target.closest('[data-copy-command]');
+  if (!button) return;
+
+  const command = document.getElementById(button.dataset.copyCommand);
+  const status = selectElement('#command-copy-status');
+  try {
+    await navigator.clipboard.writeText(command.textContent);
+    status.textContent = 'Command copied.';
+  } catch {
+    status.textContent = 'Could not copy automatically. Select and copy the command above.';
+  }
+}
+
+selectElement('#assistant-checks-dialog').addEventListener('click', copyAssistantCommand);
+
+// Open the results of the same checks shown in the Settings picker.
+selectElement('#assistant-checks-info').addEventListener('click', () => {
+  selectElement('#command-copy-status').textContent = '';
+  selectElement('#assistant-checks-dialog').showModal();
+});
+
 selectElement('#app-settings').addEventListener('click', showAppSettings);
 // Copy the exact storage path shown in Settings.
 selectElement('#copy-data-directory').addEventListener('click', copyDataDirectory);
@@ -2349,6 +2419,17 @@ selectElement('#project-form').addEventListener('submit', async (event) => {
   selectElement('#project-form-error').textContent = '';
 
   try {
+    const assistant = await fetchJson('/api/runner');
+    if (!selectElement('#project-dialog').open) return;
+    if (!assistant.selected) {
+      if (assistant.ready.length) {
+        await showAppSettings();
+      } else {
+        selectElement('#project-form-error').textContent = assistant.message;
+      }
+      return;
+    }
+
     const project = await postJson('/api/projects', {
       path: selectElement('#project-directory').value.trim(),
       name: selectElement('#new-project-name').value.trim(),
