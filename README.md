@@ -5,12 +5,9 @@
   </picture>
 </h1>
 
-<p align="center"><strong>Understand your codebase.</strong></p>
-
 <p align="center">
-  Explore a codebase with directory explanations, architecture and sequence diagrams,
-  code flows, REST endpoint inventories, and answers linked to source.
-  Runs locally using the Codex CLI.
+  CodeScope uses the Codex CLI to turn a local repository into diagrams and walkthroughs.
+  Follow a request across components, then open the source lines behind each step in your browser.
 </p>
 
 <p align="center">
@@ -34,71 +31,105 @@
   </a>
 </p>
 
+**[Explore the live demo](https://pminkov.github.io/codescope-demo/)**
+
+![Architecture diagram 02 showing ProjectStore, the project registry, saved analyses, and job history][ui]
+
+## Analyses
+
+| View | What you can explore |
+| --- | --- |
+| [Directories][directories] | Browse the folder tree to learn what each directory contains and which file to read first. |
+| [Code Scan][code-scan] | See line counts by file and jump to class, method, and function declarations in supported languages. |
+| [Architecture][architecture] | Map the components of a system or subsystem and select one to inspect its dependencies and source. |
+| [Areas][areas] | Break a feature or service into smaller responsibilities and find the source files that implement each one. |
+| [Code flows][flows] | Trace a single action from its entry point through function calls, branches, and side effects. |
+| [Nouns][nouns] | Look up the project's domain concepts to see what each one means, what it does, and how it relates to the others. |
+| [Sequences][sequences] | Follow the order of calls, replies, and asynchronous handoffs between participants in an interaction. |
+| [Endpoints][endpoints] | Look up REST routes by server, HTTP method, and path, then inspect each route's handler, request, and response. |
+| [Presentation][presentations] | Turn a topic into a slide deck with diagrams, speaker notes, and references to the code. |
+
+Open [All][all] to revisit saved analyses, newest first. In the local app, use
+**Ask** for follow-up questions about the current view, such as “Where is a
+completed analysis saved?” Answers link to the relevant lines of code.
+
 ## Run
 
-Requires Node.js 22+ and the Codex CLI on your PATH.
+Install Node.js 22 or later and the [Codex CLI](https://developers.openai.com/codex/cli/).
+Make sure `codex` is on your `PATH`.
 
 ```sh
 git clone https://github.com/pminkov/codescope.git
 cd codescope
-# Install dependencies using the exact versions in package-lock.json.
 npm ci
 codex login
 npm start
 ```
 
-Open [127.0.0.1:4310](http://127.0.0.1:4310), choose **Add project**, and select
-or paste a folder path.
+Open [127.0.0.1:4310](http://127.0.0.1:4310) and choose **Add project**. Select
+the `codescope` folder you just cloned, or paste the absolute path to another
+project. Choose **Add and analyze** to generate a directory guide and an
+architecture overview.
 
-Use **Areas** to partition an application into a small set of responsibility boxes,
-including user-facing capabilities, backend services, and infrastructure. Choose
-**New area map**, enter a scope or leave it blank for the whole project, then choose
-**Map areas**. Open a box to see its smaller areas, then use the breadcrumb or
-browser Back to move up. Each area includes a description and source links.
-Maps support up to three levels, save
-independently, and can be rerun, modified, duplicated, or deleted.
+## Working with saved analyses
 
-On the **Presentation** tab, choose **New presentation** and enter a topic to create
-a source-linked slide deck. Decks include speaker notes and custom system maps,
-request journeys, or module detail diagrams when useful. Navigate with the arrow
-keys, use **Present** (or **F**) for fullscreen, and press **Escape** to exit.
+In **Areas**, choose **New area map**, enter a feature or subsystem (or leave the
+scope blank for the whole project), and choose **Map areas**. Open an area to
+explore up to three levels of detail. Use the breadcrumb to return to its parent.
 
-Presentations are saved as versioned JSON alongside other analyses. Download JSON
-to retain the structured content, or download a standalone HTML deck with embedded
-SVG diagrams that works offline. HTML downloads include slide navigation, notes,
-and source references; browser printing produces one page per slide. The Actions
-menu supports rerunning, modifying, duplicating, and deleting saved decks.
+In **Presentation**, choose **New presentation** and enter a topic. Use the arrow
+keys to advance slides, **F** to present fullscreen, and **Escape** to exit.
+Download a deck as versioned JSON or as standalone HTML with embedded diagrams,
+speaker notes, and source references. The HTML deck works offline and prints one
+slide per page.
+
+Use **Actions** to rerun, modify, duplicate, or delete a saved map or deck.
+To share a project like the live demo, choose which source files to include and
+[export the saved analyses as a static site](scripts/export-demo.md).
 
 ## Configuration
 
-Set environment variables when starting the server:
+Set environment variables when starting the server.
 
 ```sh
 CODESCOPE_DATA_DIR="/path/to/data" PORT=4311 npm start
 ```
 
-- `CODESCOPE_DATA_DIR`: saved projects and analyses; defaults to `.codescope/`.
-- `CODESCOPE_CODEX_BIN`: path to Codex; defaults to `codex`.
-- `PORT`: local port; defaults to `4310`.
+- `CODESCOPE_DATA_DIR` sets the folder for saved projects and analyses (default `.codescope/`).
+- `CODESCOPE_CODEX_BIN` selects the Codex executable (default `codex`).
+- `PORT` sets the local port (default `4310`).
 
 Open **Settings** in the toolbar to see and copy the active data folder.
-Project paths are stored in `<data directory>/projects.json`. Source files stay
-in their original folders. Copy the existing data directory's contents to keep
-saved projects and analyses when changing its location.
+CodeScope records each project's source path in `<data directory>/projects.json`.
+To move your saved projects and analyses, copy the data folder's contents to the
+new location when changing `CODESCOPE_DATA_DIR`.
 
 ## Source and privacy
 
-- Analysis sends filtered source to OpenAI through Codex.
-- Scanning respects `.gitignore` and `.codescopeignore` in the project being analyzed.
-- Hidden files and common key files are excluded from scanning.
-- CodeScope does not modify your source.
-- Saved job history includes source snapshots and prompts.
-- The default `.codescope/` data directory is gitignored.
+CodeScope treats the selected project's source files as read-only. Scanning
+respects `.gitignore` and `.codescopeignore` and skips hidden files and common
+key files. When you generate an analysis or use **Ask**, the Codex CLI sends
+filtered source to OpenAI.
+
+Saved job history includes source snapshots and prompts. The default
+`.codescope/` data directory is gitignored.
 
 ## Development
 
 ```sh
 npm run dev    # Restart on server changes
 npm run check  # Syntax checks
-npm test       # Tests use a simulated CLI; no model usage
+npm test       # Tests use a simulated Codex CLI
 ```
+
+[ui]: docs/images/codescope-architecture.png
+[directories]: https://pminkov.github.io/codescope-demo/#/directories
+[code-scan]: https://pminkov.github.io/codescope-demo/#/code-scan
+[architecture]: https://pminkov.github.io/codescope-demo/#/architecture
+[areas]: https://pminkov.github.io/codescope-demo/#/areas
+[flows]: https://pminkov.github.io/codescope-demo/#/flows
+[nouns]: https://pminkov.github.io/codescope-demo/#/nouns
+[sequences]: https://pminkov.github.io/codescope-demo/#/sequences
+[endpoints]: https://pminkov.github.io/codescope-demo/#/endpoints
+[presentations]: https://pminkov.github.io/codescope-demo/#/presentations
+[all]: https://pminkov.github.io/codescope-demo/#/all
